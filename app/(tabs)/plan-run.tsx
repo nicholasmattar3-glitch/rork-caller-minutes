@@ -1,10 +1,30 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, PanResponder, Animated, Dimensions, TextInput, Modal } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  PanResponder,
+  Animated,
+  Dimensions,
+  TextInput,
+  Modal,
+} from 'react-native';
 import { Stack } from 'expo-router';
-import { MapPin, Users, Clock, Calendar, Plus, X, CheckCircle, Play, Route } from 'lucide-react-native';
+import {
+  MapPin,
+  Users,
+  Clock,
+  Calendar,
+  Plus,
+  X,
+  CheckCircle,
+  Play,
+  Route,
+} from 'lucide-react-native';
 import { useContacts } from '@/hooks/contacts-store';
 import { Contact } from '@/types/contact';
-import Colors from '@/constants/colors';
 
 interface RunPlan {
   id: string;
@@ -36,7 +56,7 @@ export default function PlanRunScreen() {
   const [newPlanName, setNewPlanName] = useState<string>('');
 
   // Get contacts that have call notes (potential leads)
-  const contactsWithNotes = contacts.filter(contact => 
+  const contactsWithNotes = contacts.filter(contact =>
     notes.some(note => note.contactId === contact.id)
   );
 
@@ -61,34 +81,38 @@ export default function PlanRunScreen() {
   };
 
   const addContactToPlan = (contact: Contact, planId: string) => {
-    setRunPlans(prev => prev.map(plan => {
-      if (plan.id === planId) {
-        const isAlreadyAdded = plan.contacts.some(c => c.id === contact.id);
-        if (!isAlreadyAdded) {
-          const updatedContacts = [...plan.contacts, contact];
-          return {
-            ...plan,
-            contacts: updatedContacts,
-            estimatedDuration: updatedContacts.length * 15, // 15 minutes per contact
-          };
+    setRunPlans(prev =>
+      prev.map(plan => {
+        if (plan.id === planId) {
+          const isAlreadyAdded = plan.contacts.some(c => c.id === contact.id);
+          if (!isAlreadyAdded) {
+            const updatedContacts = [...plan.contacts, contact];
+            return {
+              ...plan,
+              contacts: updatedContacts,
+              estimatedDuration: updatedContacts.length * 15, // 15 minutes per contact
+            };
+          }
         }
-      }
-      return plan;
-    }));
+        return plan;
+      })
+    );
   };
 
   const removeContactFromPlan = (contactId: string, planId: string) => {
-    setRunPlans(prev => prev.map(plan => {
-      if (plan.id === planId) {
-        const updatedContacts = plan.contacts.filter(c => c.id !== contactId);
-        return {
-          ...plan,
-          contacts: updatedContacts,
-          estimatedDuration: updatedContacts.length * 15,
-        };
-      }
-      return plan;
-    }));
+    setRunPlans(prev =>
+      prev.map(plan => {
+        if (plan.id === planId) {
+          const updatedContacts = plan.contacts.filter(c => c.id !== contactId);
+          return {
+            ...plan,
+            contacts: updatedContacts,
+            estimatedDuration: updatedContacts.length * 15,
+          };
+        }
+        return plan;
+      })
+    );
   };
 
   const deletePlan = (planId: string) => {
@@ -105,7 +129,7 @@ export default function PlanRunScreen() {
     return PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
-      
+
       onPanResponderGrant: () => {
         setDraggedContact({
           contact,
@@ -113,30 +137,30 @@ export default function PlanRunScreen() {
           scale,
           isDragging: true,
         });
-        
+
         Animated.spring(scale, {
           toValue: 1.1,
           useNativeDriver: false,
         }).start();
       },
-      
+
       onPanResponderMove: (evt, gestureState) => {
         position.setValue({ x: gestureState.dx, y: gestureState.dy });
-        
+
         // Check if over drop zone (bottom half of screen)
         const dropZoneY = screenHeight * 0.5;
         const currentY = evt.nativeEvent.pageY;
         setDropZoneActive(currentY > dropZoneY);
       },
-      
-      onPanResponderRelease: (evt) => {
+
+      onPanResponderRelease: evt => {
         const dropZoneY = screenHeight * 0.5;
         const currentY = evt.nativeEvent.pageY;
-        
+
         if (currentY > dropZoneY && selectedPlan) {
           // Dropped in the drop zone
           addContactToPlan(contact, selectedPlan.id);
-          
+
           // Success animation
           Animated.sequence([
             Animated.spring(scale, {
@@ -161,7 +185,7 @@ export default function PlanRunScreen() {
             }),
           ]).start();
         }
-        
+
         setDropZoneActive(false);
         setTimeout(() => setDraggedContact(null), 300);
       },
@@ -171,7 +195,7 @@ export default function PlanRunScreen() {
   const renderContact = ({ item }: { item: Contact }) => {
     const panResponder = createPanResponder(item);
     const notesCount = notes.filter(note => note.contactId === item.id).length;
-    
+
     return (
       <Animated.View
         {...panResponder.panHandlers}
@@ -208,13 +232,10 @@ export default function PlanRunScreen() {
 
   const renderPlan = ({ item }: { item: RunPlan }) => {
     const isSelected = selectedPlan?.id === item.id;
-    
+
     return (
       <TouchableOpacity
-        style={[
-          styles.planCard,
-          isSelected && styles.selectedPlanCard,
-        ]}
+        style={[styles.planCard, isSelected && styles.selectedPlanCard]}
         onPress={() => setSelectedPlan(item)}
       >
         <View style={styles.planHeader}>
@@ -227,17 +248,14 @@ export default function PlanRunScreen() {
               <Text style={styles.planMetaText}>{item.estimatedDuration}min</Text>
             </View>
           </View>
-          <TouchableOpacity
-            style={styles.deletePlanButton}
-            onPress={() => deletePlan(item.id)}
-          >
+          <TouchableOpacity style={styles.deletePlanButton} onPress={() => deletePlan(item.id)}>
             <X size={16} color="#FF3B30" />
           </TouchableOpacity>
         </View>
-        
+
         {item.contacts.length > 0 && (
           <View style={styles.planContacts}>
-            {item.contacts.slice(0, 3).map((contact, index) => (
+            {item.contacts.slice(0, 3).map(contact => (
               <View key={contact.id} style={styles.planContactItem}>
                 <Text style={styles.planContactName}>{contact.name}</Text>
               </View>
@@ -247,7 +265,7 @@ export default function PlanRunScreen() {
             )}
           </View>
         )}
-        
+
         <View style={styles.planActions}>
           <TouchableOpacity style={styles.planActionButton}>
             <MapPin size={14} color="#007AFF" />
@@ -272,7 +290,9 @@ export default function PlanRunScreen() {
         <View style={styles.emptyPlanState}>
           <Route size={48} color="#ccc" />
           <Text style={styles.emptyPlanTitle}>No contacts in this plan</Text>
-          <Text style={styles.emptyPlanText}>Drag contacts from above to add them to this run plan</Text>
+          <Text style={styles.emptyPlanText}>
+            Drag contacts from above to add them to this run plan
+          </Text>
         </View>
       );
     }
@@ -280,7 +300,7 @@ export default function PlanRunScreen() {
     return (
       <FlatList
         data={selectedPlan.contacts}
-        keyExtractor={(item) => item.id}
+        keyExtractor={item => item.id}
         renderItem={({ item }) => (
           <View style={styles.planContactCard}>
             <View style={styles.planContactInfo}>
@@ -307,29 +327,28 @@ export default function PlanRunScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen 
-        options={{ 
+      <Stack.Screen
+        options={{
           title: 'Plan a Run',
           headerRight: () => (
-            <TouchableOpacity
-              style={styles.headerButton}
-              onPress={() => setShowCreatePlan(true)}
-            >
+            <TouchableOpacity style={styles.headerButton} onPress={() => setShowCreatePlan(true)}>
               <Plus size={20} color="#007AFF" />
             </TouchableOpacity>
           ),
-        }} 
+        }}
       />
 
       <View style={styles.content}>
         {/* Contacts Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Contacts with Call Notes ({contactsWithNotes.length})</Text>
+          <Text style={styles.sectionTitle}>
+            Contacts with Call Notes ({contactsWithNotes.length})
+          </Text>
           <Text style={styles.sectionSubtitle}>Drag contacts to add them to your run plan</Text>
-          
+
           <FlatList
             data={contactsWithNotes}
-            keyExtractor={(item) => item.id}
+            keyExtractor={item => item.id}
             renderItem={renderContact}
             showsVerticalScrollIndicator={false}
             style={styles.contactsList}
@@ -338,18 +357,16 @@ export default function PlanRunScreen() {
         </View>
 
         {/* Run Plans Section */}
-        <View style={[
-          styles.section,
-          styles.plansSection,
-          dropZoneActive && styles.dropZoneActive
-        ]}>
+        <View
+          style={[styles.section, styles.plansSection, dropZoneActive && styles.dropZoneActive]}
+        >
           <View style={styles.plansSectionHeader}>
             <Text style={styles.sectionTitle}>Run Plans ({runPlans.length})</Text>
             {selectedPlan && (
               <Text style={styles.selectedPlanIndicator}>Selected: {selectedPlan.name}</Text>
             )}
           </View>
-          
+
           {runPlans.length === 0 ? (
             <View style={styles.emptyPlansState}>
               <Route size={48} color="#ccc" />
@@ -367,14 +384,14 @@ export default function PlanRunScreen() {
             <View style={styles.plansContainer}>
               <FlatList
                 data={runPlans}
-                keyExtractor={(item) => item.id}
+                keyExtractor={item => item.id}
                 renderItem={renderPlan}
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 style={styles.plansList}
                 contentContainerStyle={styles.plansListContent}
               />
-              
+
               {selectedPlan && (
                 <View style={styles.selectedPlanDetails}>
                   <Text style={styles.selectedPlanTitle}>{selectedPlan.name} - Contacts</Text>
@@ -417,10 +434,7 @@ export default function PlanRunScreen() {
               >
                 <Text style={styles.modalCancelText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.modalCreateButton}
-                onPress={createNewPlan}
-              >
+              <TouchableOpacity style={styles.modalCreateButton} onPress={createNewPlan}>
                 <Text style={styles.modalCreateText}>Create</Text>
               </TouchableOpacity>
             </View>

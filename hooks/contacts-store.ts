@@ -4,7 +4,19 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useCallback } from 'react';
 import { Platform } from 'react-native';
 import * as Contacts from 'expo-contacts';
-import { Contact, CallNote, IncomingCall, ActiveCall, Reminder, Order, DetectedDateTime, NoteStatus, NoteFolder, NoteFilter, ProductCatalog, Product, NoteSettings } from '@/types/contact';
+import {
+  Contact,
+  CallNote,
+  IncomingCall,
+  ActiveCall,
+  Reminder,
+  Order,
+  DetectedDateTime,
+  NoteStatus,
+  NoteFolder,
+  ProductCatalog,
+  NoteSettings,
+} from '@/types/contact';
 
 const CONTACTS_KEY = 'call_notes_contacts';
 const NOTES_KEY = 'call_notes_notes';
@@ -41,7 +53,7 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
   const [detectedDateTimes, setDetectedDateTimes] = useState<DetectedDateTime[]>([]);
   const [showReminderSuggestionModal, setShowReminderSuggestionModal] = useState<boolean>(false);
   const [currentNoteForReminder, setCurrentNoteForReminder] = useState<CallNote | null>(null);
-  
+
   // Query client - always called
   const queryClient = useQueryClient();
 
@@ -51,21 +63,21 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
       try {
         const stored = await AsyncStorage.getItem(CONTACTS_KEY);
         if (!stored || stored.trim() === '') return [];
-        
+
         // Validate JSON before parsing
         if (!stored.startsWith('[') && !stored.startsWith('{')) {
           console.warn('Invalid JSON format in contacts storage, clearing data');
           await AsyncStorage.removeItem(CONTACTS_KEY);
           return [];
         }
-        
+
         const parsed = JSON.parse(stored);
         if (!Array.isArray(parsed)) {
           console.warn('Contacts data is not an array, clearing data');
           await AsyncStorage.removeItem(CONTACTS_KEY);
           return [];
         }
-        
+
         return parsed;
       } catch (error) {
         console.error('Error parsing contacts from storage:', error);
@@ -73,7 +85,7 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
         await AsyncStorage.removeItem(CONTACTS_KEY);
         return [];
       }
-    }
+    },
   });
 
   const notesQuery = useQuery({
@@ -82,34 +94,34 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
       try {
         const stored = await AsyncStorage.getItem(NOTES_KEY);
         if (!stored || stored.trim() === '') return [];
-        
+
         // Validate JSON before parsing
         if (!stored.startsWith('[') && !stored.startsWith('{')) {
           console.warn('Invalid JSON format in notes storage, clearing data');
           await AsyncStorage.removeItem(NOTES_KEY);
           return [];
         }
-        
+
         const notes = JSON.parse(stored);
         if (!Array.isArray(notes)) {
           console.warn('Notes data is not an array, clearing data');
           await AsyncStorage.removeItem(NOTES_KEY);
           return [];
         }
-        
+
         // Migrate old notes to include status field
         const migratedNotes = notes.map((note: any) => ({
           ...note,
-          status: note.status || 'follow-up' as NoteStatus,
+          status: note.status || ('follow-up' as NoteStatus),
           customStatus: note.customStatus || undefined,
         }));
-        
+
         // Save migrated notes back if any migration occurred
         const needsMigration = notes.some((note: any) => !note.status);
         if (needsMigration) {
           await AsyncStorage.setItem(NOTES_KEY, JSON.stringify(migratedNotes));
         }
-        
+
         return migratedNotes;
       } catch (error) {
         console.error('Error parsing notes from storage:', error);
@@ -117,7 +129,7 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
         await AsyncStorage.removeItem(NOTES_KEY);
         return [];
       }
-    }
+    },
   });
 
   const remindersQuery = useQuery({
@@ -126,21 +138,21 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
       try {
         const stored = await AsyncStorage.getItem(REMINDERS_KEY);
         if (!stored || stored.trim() === '') return [];
-        
+
         // Validate JSON before parsing
         if (!stored.startsWith('[') && !stored.startsWith('{')) {
           console.warn('Invalid JSON format in reminders storage, clearing data');
           await AsyncStorage.removeItem(REMINDERS_KEY);
           return [];
         }
-        
+
         const parsed = JSON.parse(stored);
         if (!Array.isArray(parsed)) {
           console.warn('Reminders data is not an array, clearing data');
           await AsyncStorage.removeItem(REMINDERS_KEY);
           return [];
         }
-        
+
         return parsed;
       } catch (error) {
         console.error('Error parsing reminders from storage:', error);
@@ -148,7 +160,7 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
         await AsyncStorage.removeItem(REMINDERS_KEY);
         return [];
       }
-    }
+    },
   });
 
   const ordersQuery = useQuery({
@@ -157,21 +169,21 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
       try {
         const stored = await AsyncStorage.getItem(ORDERS_KEY);
         if (!stored || stored.trim() === '') return [];
-        
+
         // Validate JSON before parsing
         if (!stored.startsWith('[') && !stored.startsWith('{')) {
           console.warn('Invalid JSON format in orders storage, clearing data');
           await AsyncStorage.removeItem(ORDERS_KEY);
           return [];
         }
-        
+
         const parsed = JSON.parse(stored);
         if (!Array.isArray(parsed)) {
           console.warn('Orders data is not an array, clearing data');
           await AsyncStorage.removeItem(ORDERS_KEY);
           return [];
         }
-        
+
         return parsed;
       } catch (error) {
         console.error('Error parsing orders from storage:', error);
@@ -179,7 +191,7 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
         await AsyncStorage.removeItem(ORDERS_KEY);
         return [];
       }
-    }
+    },
   });
 
   const noteTemplateQuery = useQuery({
@@ -192,7 +204,7 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
         console.error('Error getting note template from storage:', error);
         return DEFAULT_NOTE_TEMPLATE;
       }
-    }
+    },
   });
 
   const foldersQuery = useQuery({
@@ -201,7 +213,7 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
       try {
         const stored = await AsyncStorage.getItem(FOLDERS_KEY);
         let folders = [];
-        
+
         if (stored && stored.trim() !== '') {
           // Validate JSON before parsing
           if (stored.startsWith('[') || stored.startsWith('{')) {
@@ -215,7 +227,7 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
             console.warn('Invalid JSON format in folders storage, using default folders');
           }
         }
-        
+
         // Add default folders if none exist
         if (folders.length === 0) {
           const defaultFolders: NoteFolder[] = [
@@ -224,34 +236,34 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
               name: 'Work',
               color: '#007AFF',
               createdAt: new Date(),
-              description: 'Work-related calls'
+              description: 'Work-related calls',
             },
             {
               id: 'personal',
               name: 'Personal',
               color: '#34C759',
               createdAt: new Date(),
-              description: 'Personal calls'
+              description: 'Personal calls',
             },
             {
               id: 'sales',
               name: 'Sales',
               color: '#FF9500',
               createdAt: new Date(),
-              description: 'Sales and business calls'
+              description: 'Sales and business calls',
             },
             {
               id: 'support',
               name: 'Support',
               color: '#5856D6',
               createdAt: new Date(),
-              description: 'Customer support calls'
-            }
+              description: 'Customer support calls',
+            },
           ];
           await AsyncStorage.setItem(FOLDERS_KEY, JSON.stringify(defaultFolders));
           return defaultFolders;
         }
-        
+
         return folders;
       } catch (error) {
         console.error('Error parsing folders from storage:', error);
@@ -263,34 +275,34 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
             name: 'Work',
             color: '#007AFF',
             createdAt: new Date(),
-            description: 'Work-related calls'
+            description: 'Work-related calls',
           },
           {
             id: 'personal',
             name: 'Personal',
             color: '#34C759',
             createdAt: new Date(),
-            description: 'Personal calls'
+            description: 'Personal calls',
           },
           {
             id: 'sales',
             name: 'Sales',
             color: '#FF9500',
             createdAt: new Date(),
-            description: 'Sales and business calls'
+            description: 'Sales and business calls',
           },
           {
             id: 'support',
             name: 'Support',
             color: '#5856D6',
             createdAt: new Date(),
-            description: 'Customer support calls'
-          }
+            description: 'Customer support calls',
+          },
         ];
         await AsyncStorage.setItem(FOLDERS_KEY, JSON.stringify(defaultFolders));
         return defaultFolders;
       }
-    }
+    },
   });
 
   const productCatalogsQuery = useQuery({
@@ -299,21 +311,21 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
       try {
         const stored = await AsyncStorage.getItem(PRODUCT_CATALOGS_KEY);
         if (!stored || stored.trim() === '') return [];
-        
+
         // Validate JSON before parsing
         if (!stored.startsWith('[') && !stored.startsWith('{')) {
           console.warn('Invalid JSON format in product catalogs storage, clearing data');
           await AsyncStorage.removeItem(PRODUCT_CATALOGS_KEY);
           return [];
         }
-        
+
         const parsed = JSON.parse(stored);
         if (!Array.isArray(parsed)) {
           console.warn('Product catalogs data is not an array, clearing data');
           await AsyncStorage.removeItem(PRODUCT_CATALOGS_KEY);
           return [];
         }
-        
+
         return parsed;
       } catch (error) {
         console.error('Error parsing product catalogs from storage:', error);
@@ -321,7 +333,7 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
         await AsyncStorage.removeItem(PRODUCT_CATALOGS_KEY);
         return [];
       }
-    }
+    },
   });
 
   const presetTagsQuery = useQuery({
@@ -330,7 +342,7 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
       try {
         const stored = await AsyncStorage.getItem(PRESET_TAGS_KEY);
         let tags = [];
-        
+
         if (stored && stored.trim() !== '') {
           // Validate JSON before parsing
           if (stored.startsWith('[') || stored.startsWith('{')) {
@@ -344,7 +356,7 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
             console.warn('Invalid JSON format in preset tags storage, using default tags');
           }
         }
-        
+
         // Add default tags if none exist
         if (tags.length === 0) {
           const defaultTags = [
@@ -357,12 +369,12 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
             'Order',
             'Complaint',
             'Information',
-            'Callback'
+            'Callback',
           ];
           await AsyncStorage.setItem(PRESET_TAGS_KEY, JSON.stringify(defaultTags));
           return defaultTags;
         }
-        
+
         return tags;
       } catch (error) {
         console.error('Error parsing preset tags from storage:', error);
@@ -378,12 +390,12 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
           'Order',
           'Complaint',
           'Information',
-          'Callback'
+          'Callback',
         ];
         await AsyncStorage.setItem(PRESET_TAGS_KEY, JSON.stringify(defaultTags));
         return defaultTags;
       }
-    }
+    },
   });
 
   const noteSettingsQuery = useQuery({
@@ -392,7 +404,7 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
       try {
         const stored = await AsyncStorage.getItem(NOTE_SETTINGS_KEY);
         let settings: any = {};
-        
+
         if (stored && stored.trim() !== '') {
           // Validate JSON before parsing
           if (stored.startsWith('{') || stored.startsWith('[')) {
@@ -406,7 +418,7 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
             console.warn('Invalid JSON format in note settings storage, using defaults');
           }
         }
-        
+
         // Return with default values
         return {
           showDuration: settings.showDuration ?? true,
@@ -425,16 +437,20 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
           password: undefined,
         };
       }
-    }
+    },
   });
 
   const premiumSettingsQuery = useQuery({
     queryKey: ['premiumSettings'],
-    queryFn: async (): Promise<{ isPremium: boolean; showShopifyTab: boolean; showPlanRunTab: boolean }> => {
+    queryFn: async (): Promise<{
+      isPremium: boolean;
+      showShopifyTab: boolean;
+      showPlanRunTab: boolean;
+    }> => {
       try {
         const stored = await AsyncStorage.getItem(PREMIUM_SETTINGS_KEY);
         let settings: any = {};
-        
+
         if (stored && stored.trim() !== '') {
           // Validate JSON before parsing
           if (stored.startsWith('{') || stored.startsWith('[')) {
@@ -448,7 +464,7 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
             console.warn('Invalid JSON format in premium settings storage, using defaults');
           }
         }
-        
+
         // Return with default values
         return {
           isPremium: settings.isPremium ?? false,
@@ -465,7 +481,7 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
           showPlanRunTab: false,
         };
       }
-    }
+    },
   });
 
   const addContactMutation = useMutation({
@@ -482,13 +498,13 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contacts'] });
-    }
+    },
   });
 
   const updateContactMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<Contact> }) => {
       const contacts = contactsQuery.data || [];
-      const updated = contacts.map(contact => 
+      const updated = contacts.map(contact =>
         contact.id === id ? { ...contact, ...updates } : contact
       );
       await AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify(updated));
@@ -496,7 +512,7 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contacts'] });
-    }
+    },
   });
 
   const deleteContactMutation = useMutation({
@@ -508,7 +524,7 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contacts'] });
-    }
+    },
   });
 
   const importContactsMutation = useMutation({
@@ -528,13 +544,17 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
 
       const existingContacts = contactsQuery.data || [];
       const existingPhones = new Set(existingContacts.map(c => c.phoneNumber));
-      
+
       const newContacts: Contact[] = [];
-      
+
       data.forEach(deviceContact => {
-        if (deviceContact.name && deviceContact.phoneNumbers && deviceContact.phoneNumbers.length > 0) {
+        if (
+          deviceContact.name &&
+          deviceContact.phoneNumbers &&
+          deviceContact.phoneNumbers.length > 0
+        ) {
           const phoneNumber = deviceContact.phoneNumbers[0].number?.replace(/[^\d+]/g, '') || '';
-          
+
           if (phoneNumber && !existingPhones.has(phoneNumber)) {
             newContacts.push({
               id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
@@ -553,7 +573,7 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contacts'] });
-    }
+    },
   });
 
   const addNoteMutation = useMutation({
@@ -570,13 +590,13 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notes'] });
-    }
+    },
   });
 
   const updateNoteMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<CallNote> }) => {
       const notes = notesQuery.data || [];
-      const updated = notes.map(note => 
+      const updated = notes.map(note =>
         note.id === id ? { ...note, ...updates, updatedAt: new Date() } : note
       );
       await AsyncStorage.setItem(NOTES_KEY, JSON.stringify(updated));
@@ -584,7 +604,7 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notes'] });
-    }
+    },
   });
 
   const deleteNoteMutation = useMutation({
@@ -596,7 +616,7 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notes'] });
-    }
+    },
   });
 
   const addReminderMutation = useMutation({
@@ -613,7 +633,7 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reminders'] });
-    }
+    },
   });
 
   const updateReminderMutation = useMutation({
@@ -639,7 +659,7 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reminders'] });
-    }
+    },
   });
 
   const deleteReminderMutation = useMutation({
@@ -651,7 +671,7 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reminders'] });
-    }
+    },
   });
 
   const addOrderMutation = useMutation({
@@ -669,13 +689,13 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
-    }
+    },
   });
 
   const updateOrderMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<Order> }) => {
       const orders = ordersQuery.data || [];
-      const updated = orders.map(order => 
+      const updated = orders.map(order =>
         order.id === id ? { ...order, ...updates, updatedAt: new Date() } : order
       );
       await AsyncStorage.setItem(ORDERS_KEY, JSON.stringify(updated));
@@ -683,7 +703,7 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
-    }
+    },
   });
 
   const deleteOrderMutation = useMutation({
@@ -695,7 +715,7 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
-    }
+    },
   });
 
   const updateNoteTemplateMutation = useMutation({
@@ -705,7 +725,7 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['noteTemplate'] });
-    }
+    },
   });
 
   const addFolderMutation = useMutation({
@@ -722,13 +742,13 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['folders'] });
-    }
+    },
   });
 
   const updateFolderMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<NoteFolder> }) => {
       const folders = foldersQuery.data || [];
-      const updated = folders.map(folder => 
+      const updated = folders.map(folder =>
         folder.id === id ? { ...folder, ...updates } : folder
       );
       await AsyncStorage.setItem(FOLDERS_KEY, JSON.stringify(updated));
@@ -736,30 +756,30 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['folders'] });
-    }
+    },
   });
 
   const deleteFolderMutation = useMutation({
     mutationFn: async (folderId: string) => {
       const folders = foldersQuery.data || [];
       const notes = notesQuery.data || [];
-      
+
       // Remove folder reference from notes
-      const updatedNotes = notes.map(note => 
+      const updatedNotes = notes.map(note =>
         note.folderId === folderId ? { ...note, folderId: undefined } : note
       );
       await AsyncStorage.setItem(NOTES_KEY, JSON.stringify(updatedNotes));
-      
+
       // Remove folder
       const updatedFolders = folders.filter(f => f.id !== folderId);
       await AsyncStorage.setItem(FOLDERS_KEY, JSON.stringify(updatedFolders));
-      
+
       return { folders: updatedFolders, notes: updatedNotes };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['folders'] });
       queryClient.invalidateQueries({ queryKey: ['notes'] });
-    }
+    },
   });
 
   const addProductCatalogMutation = useMutation({
@@ -777,13 +797,13 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['productCatalogs'] });
-    }
+    },
   });
 
   const updateProductCatalogMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<ProductCatalog> }) => {
       const catalogs = productCatalogsQuery.data || [];
-      const updated = catalogs.map(catalog => 
+      const updated = catalogs.map(catalog =>
         catalog.id === id ? { ...catalog, ...updates, updatedAt: new Date() } : catalog
       );
       await AsyncStorage.setItem(PRODUCT_CATALOGS_KEY, JSON.stringify(updated));
@@ -791,7 +811,7 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['productCatalogs'] });
-    }
+    },
   });
 
   const deleteProductCatalogMutation = useMutation({
@@ -803,7 +823,7 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['productCatalogs'] });
-    }
+    },
   });
 
   const updatePresetTagsMutation = useMutation({
@@ -813,7 +833,7 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['presetTags'] });
-    }
+    },
   });
 
   const updateNoteSettingsMutation = useMutation({
@@ -825,21 +845,27 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['noteSettings'] });
-    }
+    },
   });
 
   const updatePremiumSettingsMutation = useMutation({
-    mutationFn: async (updates: Partial<{ isPremium: boolean; showShopifyTab: boolean; showPlanRunTab: boolean }>) => {
-      const current = premiumSettingsQuery.data || { isPremium: false, showShopifyTab: false, showPlanRunTab: false };
+    mutationFn: async (
+      updates: Partial<{ isPremium: boolean; showShopifyTab: boolean; showPlanRunTab: boolean }>
+    ) => {
+      const current = premiumSettingsQuery.data || {
+        isPremium: false,
+        showShopifyTab: false,
+        showPlanRunTab: false,
+      };
       const updated = { ...current, ...updates };
       await AsyncStorage.setItem(PREMIUM_SETTINGS_KEY, JSON.stringify(updated));
       return updated;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['premiumSettings'] });
-    }
+    },
   });
-  
+
   // Always extract mutations in the same order
   const { mutate: addNoteMutate } = addNoteMutation;
   const { mutate: addReminderMutate } = addReminderMutation;
@@ -853,13 +879,16 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
     setShowNoteModal(true);
   }, []);
 
-  const simulateIncomingCall = useCallback((contact: Contact, direction: 'inbound' | 'outbound' = 'inbound') => {
-    setIncomingCall({
-      contact,
-      startTime: new Date(),
-      direction,
-    });
-  }, []);
+  const simulateIncomingCall = useCallback(
+    (contact: Contact, direction: 'inbound' | 'outbound' = 'inbound') => {
+      setIncomingCall({
+        contact,
+        startTime: new Date(),
+        direction,
+      });
+    },
+    []
+  );
 
   const endCall = useCallback(() => {
     if (activeCall && callStartTime) {
@@ -871,7 +900,7 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
       setShowNoteModal(true);
     }
   }, [activeCall, callStartTime]);
-  
+
   const answerCall = useCallback(() => {
     if (incomingCall) {
       const callStart = new Date();
@@ -882,7 +911,7 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
       });
       setCallStartTime(callStart);
       setIncomingCall(null);
-      
+
       // Simulate call duration (3-10 seconds for demo)
       const callDuration = Math.floor(Math.random() * 8000) + 3000;
       setTimeout(() => {
@@ -890,8 +919,6 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
       }, callDuration);
     }
   }, [incomingCall, endCall]);
-  
-
 
   const declineCall = useCallback(() => {
     setIncomingCall(null);
@@ -909,43 +936,47 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
   const detectDateTimeInText = useCallback((text: string): DetectedDateTime[] => {
     const detections: DetectedDateTime[] = [];
     const now = new Date();
-    
+
     // Skip the header line that contains "Call with [CONTACT_NAME] - [DATE]"
     // Split text into lines and process only lines after the header
     const lines = text.split('\n');
     let textToProcess = text;
-    
+
     // If the first line matches the call header pattern, exclude it from detection
     if (lines.length > 0 && lines[0].match(/^Call with .* - /)) {
       // Process all lines except the first one
       textToProcess = lines.slice(1).join('\n');
     }
-    
+
     // Only look for time patterns in 12/24 hour format
     const patterns = [
       // 24-hour format (e.g., 14:30, 09:00)
       { regex: /\b([01]?\d|2[0-3]):([0-5]\d)\b/g, type: 'time' as const, is24Hour: true },
       // 12-hour format with am/pm (e.g., 2:30pm, 9:00 AM)
-      { regex: /\b(1[0-2]|0?[1-9]):([0-5]\d)\s*(am|pm|AM|PM)\b/g, type: 'time' as const, is24Hour: false },
+      {
+        regex: /\b(1[0-2]|0?[1-9]):([0-5]\d)\s*(am|pm|AM|PM)\b/g,
+        type: 'time' as const,
+        is24Hour: false,
+      },
       // 12-hour format without colon (e.g., 2pm, 9 AM)
       { regex: /\b(1[0-2]|0?[1-9])\s*(am|pm|AM|PM)\b/g, type: 'time' as const, is24Hour: false },
     ];
-    
+
     patterns.forEach(pattern => {
       let match;
       while ((match = pattern.regex.exec(textToProcess)) !== null) {
         const matchText = match[0];
-        let suggestedDate = new Date(now);
-        
+        const suggestedDate = new Date(now);
+
         try {
           // Parse time
           let hours = parseInt(match[1]);
           let minutes = 0;
-          
+
           if (match[2] && match[2].match(/\d+/)) {
             minutes = parseInt(match[2]);
           }
-          
+
           // Handle 12-hour format with AM/PM
           if (!pattern.is24Hour && match[3]) {
             const ampm = match[3].toLowerCase();
@@ -963,104 +994,126 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
               hours = 0;
             }
           }
-          
+
           // Set the time for today initially
           suggestedDate.setHours(hours, minutes, 0, 0);
-          
+
           // If the time has already passed today, set it for tomorrow
           if (suggestedDate.getTime() <= now.getTime()) {
             suggestedDate.setDate(suggestedDate.getDate() + 1);
           }
-          
+
           detections.push({
             originalText: matchText,
             suggestedDate,
             type: 'time',
-            confidence: 0.9
+            confidence: 0.9,
           });
         } catch (error) {
           console.log('Error parsing time:', error);
         }
       }
     });
-    
+
     // Remove duplicate times (same hour and minute)
     const uniqueDetections = detections.filter((detection, index, self) => {
-      return index === self.findIndex(d => 
-        d.suggestedDate.getHours() === detection.suggestedDate.getHours() &&
-        d.suggestedDate.getMinutes() === detection.suggestedDate.getMinutes()
+      return (
+        index ===
+        self.findIndex(
+          d =>
+            d.suggestedDate.getHours() === detection.suggestedDate.getHours() &&
+            d.suggestedDate.getMinutes() === detection.suggestedDate.getMinutes()
+        )
       );
     });
-    
+
     return uniqueDetections;
   }, []);
 
-  const saveNote = useCallback((noteText: string, status: NoteStatus = 'follow-up', customStatus?: string, priority?: 'low' | 'medium' | 'high', tags?: string[]) => {
-    if (currentCallContact && callStartTime && callEndTime) {
-      const duration = Math.floor((callEndTime.getTime() - callStartTime.getTime()) / 1000);
-      const finalNote = noteText.trim() || 'No note was taken';
-      
-      const newNote: CallNote = {
-        id: Date.now().toString(),
-        contactId: currentCallContact.id,
-        contactName: currentCallContact.name,
-        note: finalNote,
-        callStartTime,
-        callEndTime,
-        callDuration: duration,
-        isAutoGenerated: !noteText.trim(),
-        callDirection,
-        status,
-        customStatus,
-        priority: priority || 'medium',
-        tags: tags || [],
-        createdAt: new Date(),
-      };
-      
-      addNoteMutate({
-        contactId: currentCallContact.id,
-        contactName: currentCallContact.name,
-        note: finalNote,
-        callStartTime,
-        callEndTime,
-        callDuration: duration,
-        isAutoGenerated: !noteText.trim(),
-        callDirection,
-        status,
-        customStatus,
-        priority: priority || 'medium',
-        tags: tags || [],
-      });
-      
-      // Detect dates/times in the note text if it's not auto-generated
-      if (noteText.trim()) {
-        const detectedDates = detectDateTimeInText(noteText);
-        if (detectedDates.length > 0) {
-          setDetectedDateTimes(detectedDates);
-          setCurrentNoteForReminder(newNote);
-          setShowReminderSuggestionModal(true);
+  const saveNote = useCallback(
+    (
+      noteText: string,
+      status: NoteStatus = 'follow-up',
+      customStatus?: string,
+      priority?: 'low' | 'medium' | 'high',
+      tags?: string[]
+    ) => {
+      if (currentCallContact && callStartTime && callEndTime) {
+        const duration = Math.floor((callEndTime.getTime() - callStartTime.getTime()) / 1000);
+        const finalNote = noteText.trim() || 'No note was taken';
+
+        const newNote: CallNote = {
+          id: Date.now().toString(),
+          contactId: currentCallContact.id,
+          contactName: currentCallContact.name,
+          note: finalNote,
+          callStartTime,
+          callEndTime,
+          callDuration: duration,
+          isAutoGenerated: !noteText.trim(),
+          callDirection,
+          status,
+          customStatus,
+          priority: priority || 'medium',
+          tags: tags || [],
+          createdAt: new Date(),
+        };
+
+        addNoteMutate({
+          contactId: currentCallContact.id,
+          contactName: currentCallContact.name,
+          note: finalNote,
+          callStartTime,
+          callEndTime,
+          callDuration: duration,
+          isAutoGenerated: !noteText.trim(),
+          callDirection,
+          status,
+          customStatus,
+          priority: priority || 'medium',
+          tags: tags || [],
+        });
+
+        // Detect dates/times in the note text if it's not auto-generated
+        if (noteText.trim()) {
+          const detectedDates = detectDateTimeInText(noteText);
+          if (detectedDates.length > 0) {
+            setDetectedDateTimes(detectedDates);
+            setCurrentNoteForReminder(newNote);
+            setShowReminderSuggestionModal(true);
+          }
         }
       }
-    }
-    closeNoteModal();
-  }, [currentCallContact, callStartTime, callEndTime, callDirection, addNoteMutate, closeNoteModal, detectDateTimeInText]);
+      closeNoteModal();
+    },
+    [
+      currentCallContact,
+      callStartTime,
+      callEndTime,
+      callDirection,
+      addNoteMutate,
+      closeNoteModal,
+      detectDateTimeInText,
+    ]
+  );
 
-  const getFormattedNoteTemplate = useCallback((contactName: string) => {
-    const template = noteTemplateQuery.data || DEFAULT_NOTE_TEMPLATE;
-    const now = new Date();
-    const formattedDate = now.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-    
-    return template
-      .replace(/\[CONTACT_NAME\]/g, contactName)
-      .replace(/\[DATE\]/g, formattedDate);
-  }, [noteTemplateQuery.data]);
+  const getFormattedNoteTemplate = useCallback(
+    (contactName: string) => {
+      const template = noteTemplateQuery.data || DEFAULT_NOTE_TEMPLATE;
+      const now = new Date();
+      const formattedDate = now.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+
+      return template.replace(/\[CONTACT_NAME\]/g, contactName).replace(/\[DATE\]/g, formattedDate);
+    },
+    [noteTemplateQuery.data]
+  );
 
   const clearAllData = useCallback(async () => {
     await AsyncStorage.removeItem(CONTACTS_KEY);
@@ -1089,12 +1142,14 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
         {
           name: 'John Smith',
           phoneNumber: '+1234567890',
-          businessCardImage: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=250&fit=crop&crop=face',
+          businessCardImage:
+            'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=250&fit=crop&crop=face',
         },
         {
           name: 'Sarah Johnson',
           phoneNumber: '+1987654321',
-          businessCardImage: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=250&fit=crop&crop=face',
+          businessCardImage:
+            'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=250&fit=crop&crop=face',
         },
         {
           name: 'Michael Brown',
@@ -1103,7 +1158,8 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
         {
           name: 'Emily Davis',
           phoneNumber: '+1444987654',
-          businessCardImage: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=250&fit=crop&crop=face',
+          businessCardImage:
+            'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=250&fit=crop&crop=face',
         },
         {
           name: 'David Wilson',
@@ -1148,14 +1204,14 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
         {
           name: 'Matthew Jackson',
           phoneNumber: '+1222456789',
-        }
+        },
       ];
 
       const existingContacts = contactsQuery.data || [];
       const existingPhones = new Set(existingContacts.map(c => c.phoneNumber));
-      
+
       const newContacts: Contact[] = [];
-      
+
       fakeContacts.forEach(fakeContact => {
         if (!existingPhones.has(fakeContact.phoneNumber)) {
           newContacts.push({
@@ -1173,23 +1229,26 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contacts'] });
-    }
+    },
   });
 
-  const createReminderFromDetection = useCallback((detection: DetectedDateTime, title?: string) => {
-    if (currentNoteForReminder) {
-      const reminderTitle = title || `Follow up: ${detection.originalText}`;
-      addReminderMutate({
-        contactId: currentNoteForReminder.contactId,
-        contactName: currentNoteForReminder.contactName,
-        title: reminderTitle,
-        description: `From call note: "${currentNoteForReminder.note.substring(0, 100)}${currentNoteForReminder.note.length > 100 ? '...' : ''}"`,
-        dueDate: detection.suggestedDate,
-        isCompleted: false,
-        relatedNoteId: currentNoteForReminder.id,
-      });
-    }
-  }, [currentNoteForReminder, addReminderMutate]);
+  const createReminderFromDetection = useCallback(
+    (detection: DetectedDateTime, title?: string) => {
+      if (currentNoteForReminder) {
+        const reminderTitle = title || `Follow up: ${detection.originalText}`;
+        addReminderMutate({
+          contactId: currentNoteForReminder.contactId,
+          contactName: currentNoteForReminder.contactName,
+          title: reminderTitle,
+          description: `From call note: "${currentNoteForReminder.note.substring(0, 100)}${currentNoteForReminder.note.length > 100 ? '...' : ''}"`,
+          dueDate: detection.suggestedDate,
+          isCompleted: false,
+          relatedNoteId: currentNoteForReminder.id,
+        });
+      }
+    },
+    [currentNoteForReminder, addReminderMutate]
+  );
 
   const closeReminderSuggestionModal = useCallback(() => {
     setShowReminderSuggestionModal(false);
@@ -1198,46 +1257,6 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
   }, []);
 
   // Call Directory Extension Support (iOS only)
-  const getCallDirectoryData = useCallback(() => {
-    if (Platform.OS !== 'ios') {
-      return { identificationEntries: [], blockingEntries: [] };
-    }
-
-    const contacts = contactsQuery.data || [];
-    
-    // Format contacts for iOS Call Directory
-    const identificationEntries = contacts
-      .filter(contact => contact.phoneNumber)
-      .map(contact => ({
-        phoneNumber: contact.phoneNumber.replace(/[^\d+]/g, ''), // Clean phone number
-        label: contact.name,
-      }))
-      .sort((a, b) => a.phoneNumber.localeCompare(b.phoneNumber)); // iOS requires sorted entries
-
-    // For blocking, you could add logic to block numbers not in contacts
-    // or maintain a separate blocked numbers list
-    const blockingEntries: { phoneNumber: string }[] = [];
-
-    return {
-      identificationEntries,
-      blockingEntries,
-      totalContacts: contacts.length,
-      lastUpdated: new Date().toISOString(),
-    };
-  }, [contactsQuery.data]);
-
-  const exportCallDirectoryData = useCallback(async () => {
-    if (Platform.OS !== 'ios') {
-      throw new Error('Call Directory is only available on iOS');
-    }
-
-    const data = getCallDirectoryData();
-    
-    // Store the data in a format that could be accessed by a Call Directory extension
-    await AsyncStorage.setItem('call_directory_data', JSON.stringify(data));
-    
-    return data;
-  }, [getCallDirectoryData]);
 
   return {
     contacts: contactsQuery.data || [],
@@ -1247,10 +1266,28 @@ export const [ContactsProvider, useContacts] = createContextHook(() => {
     folders: foldersQuery.data || [],
     productCatalogs: productCatalogsQuery.data || [],
     presetTags: presetTagsQuery.data || [],
-    noteSettings: noteSettingsQuery.data || { showDuration: true, showDirection: true, passwordProtected: false },
-    premiumSettings: premiumSettingsQuery.data || { isPremium: false, showShopifyTab: false, showPlanRunTab: false },
+    noteSettings: noteSettingsQuery.data || {
+      showDuration: true,
+      showDirection: true,
+      passwordProtected: false,
+    },
+    premiumSettings: premiumSettingsQuery.data || {
+      isPremium: false,
+      showShopifyTab: false,
+      showPlanRunTab: false,
+    },
     noteTemplate: noteTemplateQuery.data || DEFAULT_NOTE_TEMPLATE,
-    isLoading: contactsQuery.isLoading || notesQuery.isLoading || remindersQuery.isLoading || ordersQuery.isLoading || noteTemplateQuery.isLoading || foldersQuery.isLoading || productCatalogsQuery.isLoading || presetTagsQuery.isLoading || noteSettingsQuery.isLoading || premiumSettingsQuery.isLoading,
+    isLoading:
+      contactsQuery.isLoading ||
+      notesQuery.isLoading ||
+      remindersQuery.isLoading ||
+      ordersQuery.isLoading ||
+      noteTemplateQuery.isLoading ||
+      foldersQuery.isLoading ||
+      productCatalogsQuery.isLoading ||
+      presetTagsQuery.isLoading ||
+      noteSettingsQuery.isLoading ||
+      premiumSettingsQuery.isLoading,
     incomingCall,
     activeCall,
     showNoteModal,

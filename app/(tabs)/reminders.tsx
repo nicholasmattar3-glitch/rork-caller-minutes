@@ -1,15 +1,44 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Modal, SafeAreaView, Animated, AppState, SectionList } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Alert,
+  TextInput,
+  Modal,
+  Animated,
+  Pressable,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Button from '@/components/Button';
 import { Stack } from 'expo-router';
-import { Bell, CheckCircle, Circle, Calendar, User, AlertCircle, Plus, X, Edit3, Trash2, Archive, Cloud, Search, Clock, Filter, Phone, Package, ChevronDown, ChevronUp } from 'lucide-react-native';
+import {
+  Bell,
+  CheckCircle,
+  Circle,
+  Calendar,
+  User,
+  AlertCircle,
+  Plus,
+  X,
+  Trash2,
+  Archive,
+  Search,
+  Clock,
+  Filter,
+  Phone,
+  Package,
+  ChevronDown,
+} from 'lucide-react-native';
 import { useContacts } from '@/hooks/contacts-store';
-import { Contact, Reminder, Order } from '@/types/contact';
+import { Reminder } from '@/types/contact';
 import GroupedView, { GroupByOption } from '@/components/GroupedView';
 
 export default function RemindersScreen() {
-  const { reminders, contacts, orders, addReminder, updateReminder, deleteReminder, updateOrder } = useContacts();
+  const { reminders, contacts, orders, addReminder, updateReminder, deleteReminder, updateOrder } =
+    useContacts();
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
-  const [editingReminder, setEditingReminder] = useState<string | null>(null);
   const [newReminderTitle, setNewReminderTitle] = useState<string>('');
   const [newReminderDescription, setNewReminderDescription] = useState<string>('');
   const [selectedContactId, setSelectedContactId] = useState<string>('');
@@ -22,39 +51,38 @@ export default function RemindersScreen() {
   const [showCallReminders, setShowCallReminders] = useState<boolean>(true);
   const [showOrderReminders, setShowOrderReminders] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<'all' | 'calls' | 'orders'>('all');
-  const [expandedSections, setExpandedSections] = useState<{ [key: string]: boolean }>({ calls: true, orders: true });
   const fadeAnim = new Animated.Value(0);
 
   // Parse time from description
   const parseTimeFromDescription = (description: string): Date | null => {
     if (!description) return null;
-    
+
     // Match various time formats
     const timePatterns = [
       /\b(\d{1,2})\s*[:.]\s*(\d{2})\s*(am|pm)?\b/i, // 12:30, 12.30, 12:30pm
       /\b(\d{1,2})\s*(am|pm)\b/i, // 3pm, 10am
       /\bat\s+(\d{1,2})\s*[:.]?\s*(\d{0,2})\s*(am|pm)?\b/i, // at 3, at 3:30pm
     ];
-    
+
     for (const pattern of timePatterns) {
       const match = description.match(pattern);
       if (match) {
         let hours = parseInt(match[1]);
-        let minutes = match[2] ? parseInt(match[2]) : 0;
+        const minutes = match[2] ? parseInt(match[2]) : 0;
         const meridiem = match[3] || match[match.length - 1];
-        
+
         if (meridiem) {
           const isPM = meridiem.toLowerCase() === 'pm';
           if (isPM && hours < 12) hours += 12;
           if (!isPM && hours === 12) hours = 0;
         }
-        
+
         const date = new Date(selectedDate);
         date.setHours(hours, minutes, 0, 0);
         return date;
       }
     }
-    
+
     return null;
   };
 
@@ -63,12 +91,12 @@ export default function RemindersScreen() {
     console.log('Title:', newReminderTitle);
     console.log('Selected Contact ID:', selectedContactId);
     console.log('Contacts available:', contacts.length);
-    
+
     if (!newReminderTitle.trim()) {
       Alert.alert('Error', 'Please enter a reminder title');
       return;
     }
-    
+
     if (!selectedContactId) {
       Alert.alert('Error', 'Please select a contact');
       return;
@@ -76,7 +104,7 @@ export default function RemindersScreen() {
 
     const contact = contacts.find(c => c.id === selectedContactId);
     console.log('Found contact:', contact);
-    
+
     if (!contact) {
       Alert.alert('Error', 'Selected contact not found');
       return;
@@ -85,7 +113,7 @@ export default function RemindersScreen() {
     // Check if description contains time and update selectedDate
     const parsedTime = parseTimeFromDescription(newReminderDescription);
     const finalDate = parsedTime || selectedDate;
-    
+
     console.log('Creating reminder with data:', {
       contactId: contact.id,
       contactName: contact.name,
@@ -94,7 +122,7 @@ export default function RemindersScreen() {
       dueDate: finalDate,
       isCompleted: false,
     });
-    
+
     try {
       addReminder({
         contactId: contact.id,
@@ -104,9 +132,9 @@ export default function RemindersScreen() {
         dueDate: finalDate,
         isCompleted: false,
       });
-      
+
       console.log('Reminder added successfully');
-      
+
       // Reset form
       setNewReminderTitle('');
       setNewReminderDescription('');
@@ -114,7 +142,7 @@ export default function RemindersScreen() {
       setSelectedDate(new Date());
       setContactSearch('');
       setShowAddModal(false);
-      
+
       Alert.alert('Success', 'Reminder created successfully!');
     } catch (error) {
       console.error('Error adding reminder:', error);
@@ -133,15 +161,15 @@ export default function RemindersScreen() {
         // Handle order reminder completion
         const order = orders.find(o => o.id === reminder.orderId);
         if (order) {
-          updateOrder({ 
-            id: order.id, 
-            updates: { reminderSent: false } 
+          updateOrder({
+            id: order.id,
+            updates: { reminderSent: false },
           });
         }
       } else {
-        updateReminder({ 
-          id: reminder.id, 
-          updates: { isCompleted: false } 
+        updateReminder({
+          id: reminder.id,
+          updates: { isCompleted: false },
         });
       }
     }
@@ -153,21 +181,21 @@ export default function RemindersScreen() {
         // Handle order reminder archiving
         const order = orders.find(o => o.id === (completedReminder as any).orderId);
         if (order) {
-          updateOrder({ 
-            id: order.id, 
-            updates: { 
+          updateOrder({
+            id: order.id,
+            updates: {
               reminderSent: true,
-              status: 'delivered' 
-            } 
+              status: 'delivered',
+            },
           });
         }
       } else {
-        updateReminder({ 
-          id: completedReminder.id, 
-          updates: { 
+        updateReminder({
+          id: completedReminder.id,
+          updates: {
             isCompleted: true,
-            isArchived: true 
-          } 
+            isArchived: true,
+          },
         });
       }
       setShowCompletionModal(false);
@@ -181,12 +209,12 @@ export default function RemindersScreen() {
         // Handle order reminder deletion
         const order = orders.find(o => o.id === (completedReminder as any).orderId);
         if (order) {
-          updateOrder({ 
-            id: order.id, 
-            updates: { 
+          updateOrder({
+            id: order.id,
+            updates: {
               reminderDate: undefined,
-              reminderSent: false 
-            } 
+              reminderSent: false,
+            },
           });
         }
       } else {
@@ -203,15 +231,15 @@ export default function RemindersScreen() {
         // Handle order reminder keeping
         const order = orders.find(o => o.id === (completedReminder as any).orderId);
         if (order) {
-          updateOrder({ 
-            id: order.id, 
-            updates: { reminderSent: true } 
+          updateOrder({
+            id: order.id,
+            updates: { reminderSent: true },
           });
         }
       } else {
-        updateReminder({ 
-          id: completedReminder.id, 
-          updates: { isCompleted: true } 
+        updateReminder({
+          id: completedReminder.id,
+          updates: { isCompleted: true },
         });
       }
       setShowCompletionModal(false);
@@ -223,15 +251,22 @@ export default function RemindersScreen() {
   const filteredContacts = useMemo(() => {
     if (!contactSearch.trim()) return contacts;
     const query = contactSearch.toLowerCase();
-    return contacts.filter(contact => 
-      contact.name.toLowerCase().includes(query) ||
-      contact.phoneNumber.toLowerCase().includes(query)
+    return contacts.filter(
+      contact =>
+        contact.name.toLowerCase().includes(query) ||
+        contact.phoneNumber.toLowerCase().includes(query)
     );
   }, [contacts, contactSearch]);
 
-  const ContactPicker = ({ selectedId, onSelect }: { selectedId: string; onSelect: (id: string) => void }) => {
+  const ContactPicker = ({
+    selectedId,
+    onSelect,
+  }: {
+    selectedId: string;
+    onSelect: (id: string) => void;
+  }) => {
     const selectedContact = contacts.find(c => c.id === selectedId);
-    
+
     return (
       <View style={styles.contactPicker}>
         <Text style={styles.inputLabel}>Contact *</Text>
@@ -251,29 +286,29 @@ export default function RemindersScreen() {
                 onChangeText={setContactSearch}
               />
               {contactSearch.length > 0 && (
-                <TouchableOpacity onPress={() => setContactSearch('')}>
+                <Pressable onPress={() => setContactSearch('')}>
                   <X size={16} color="#8E8E93" />
-                </TouchableOpacity>
+                </Pressable>
               )}
             </View>
-            
+
             {selectedContact && (
               <View style={styles.selectedContactCard}>
                 <User size={16} color="#007AFF" />
                 <Text style={styles.selectedContactName}>{selectedContact.name}</Text>
-                <TouchableOpacity onPress={() => onSelect('')}>
+                <Pressable onPress={() => onSelect('')}>
                   <X size={16} color="#666" />
-                </TouchableOpacity>
+                </Pressable>
               </View>
             )}
-            
+
             <ScrollView style={styles.contactScrollView} showsVerticalScrollIndicator={false}>
-              {filteredContacts.map((contact) => (
-                <TouchableOpacity
+              {filteredContacts.map(contact => (
+                <Pressable
                   key={contact.id}
                   style={[
                     styles.contactItem,
-                    selectedId === contact.id && styles.selectedContactItem
+                    selectedId === contact.id && styles.selectedContactItem,
                   ]}
                   onPress={() => {
                     onSelect(contact.id);
@@ -289,25 +324,23 @@ export default function RemindersScreen() {
                         toValue: 0,
                         duration: 200,
                         useNativeDriver: true,
-                      })
+                      }),
                     ]).start();
                   }}
                 >
                   <View style={styles.contactItemContent}>
-                    <Text style={[
-                      styles.contactItemName,
-                      selectedId === contact.id && styles.selectedContactItemName
-                    ]}>
+                    <Text
+                      style={[
+                        styles.contactItemName,
+                        selectedId === contact.id && styles.selectedContactItemName,
+                      ]}
+                    >
                       {contact.name}
                     </Text>
-                    <Text style={styles.contactItemPhone}>
-                      {contact.phoneNumber}
-                    </Text>
+                    <Text style={styles.contactItemPhone}>{contact.phoneNumber}</Text>
                   </View>
-                  {selectedId === contact.id && (
-                    <CheckCircle size={20} color="#007AFF" />
-                  )}
-                </TouchableOpacity>
+                  {selectedId === contact.id && <CheckCircle size={20} color="#007AFF" />}
+                </Pressable>
               ))}
             </ScrollView>
           </>
@@ -316,7 +349,13 @@ export default function RemindersScreen() {
     );
   };
 
-  const DatePicker = ({ date, onDateChange }: { date: Date; onDateChange: (date: Date) => void }) => {
+  const DatePicker = ({
+    date,
+    onDateChange,
+  }: {
+    date: Date;
+    onDateChange: (date: Date) => void;
+  }) => {
     const today = new Date();
     const tomorrow = new Date();
     tomorrow.setDate(today.getDate() + 1);
@@ -333,30 +372,22 @@ export default function RemindersScreen() {
       <View style={styles.datePicker}>
         <Text style={styles.inputLabel}>Due Date</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dateScrollView}>
-          {quickDates.map((quickDate) => {
+          {quickDates.map(quickDate => {
             const isSelected = date.toDateString() === quickDate.date.toDateString();
             return (
-              <TouchableOpacity
+              <Pressable
                 key={quickDate.label}
-                style={[
-                  styles.dateChip,
-                  isSelected && styles.selectedDateChip
-                ]}
+                style={[styles.dateChip, isSelected && styles.selectedDateChip]}
                 onPress={() => onDateChange(quickDate.date)}
               >
-                <Text style={[
-                  styles.dateChipText,
-                  isSelected && styles.selectedDateChipText
-                ]}>
+                <Text style={[styles.dateChipText, isSelected && styles.selectedDateChipText]}>
                   {quickDate.label}
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             );
           })}
         </ScrollView>
-        <Text style={styles.selectedDateText}>
-          Selected: {date.toLocaleDateString()}
-        </Text>
+        <Text style={styles.selectedDateText}>Selected: {date.toLocaleDateString()}</Text>
       </View>
     );
   };
@@ -370,13 +401,13 @@ export default function RemindersScreen() {
     >
       <View style={styles.modalContainer}>
         <View style={styles.modalHeader}>
-          <TouchableOpacity onPress={() => setShowAddModal(false)}>
+          <Pressable onPress={() => setShowAddModal(false)}>
             <X size={24} color="#666" />
-          </TouchableOpacity>
+          </Pressable>
           <Text style={styles.modalTitle}>Add Reminder</Text>
-          <TouchableOpacity onPress={handleAddReminder}>
+          <Pressable onPress={handleAddReminder}>
             <Text style={styles.saveButton}>Save</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
         <ScrollView style={styles.modalContent}>
@@ -396,7 +427,7 @@ export default function RemindersScreen() {
             <TextInput
               style={[styles.textInput, styles.textArea]}
               value={newReminderDescription}
-              onChangeText={(text) => {
+              onChangeText={text => {
                 setNewReminderDescription(text);
                 // Auto-detect time in description
                 const detectedTime = parseTimeFromDescription(text);
@@ -412,7 +443,11 @@ export default function RemindersScreen() {
               <View style={styles.timeDetected}>
                 <Clock size={14} color="#007AFF" />
                 <Text style={styles.timeDetectedText}>
-                  Time detected: {parseTimeFromDescription(newReminderDescription)?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  Time detected:{' '}
+                  {parseTimeFromDescription(newReminderDescription)?.toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
                 </Text>
               </View>
             )}
@@ -430,7 +465,7 @@ export default function RemindersScreen() {
     const modalTitle = isOrderReminder ? 'Order Reminder Completed!' : 'Call Reminder Completed!';
     const modalIcon = isOrderReminder ? Package : Phone;
     const IconComponent = modalIcon;
-    
+
     return (
       <Modal
         visible={showCompletionModal}
@@ -439,9 +474,19 @@ export default function RemindersScreen() {
         onRequestClose={() => setShowCompletionModal(false)}
       >
         <View style={styles.completionModalOverlay}>
-          <View style={[styles.completionModalContainer, isOrderReminder && styles.orderCompletionModal]}>
+          <View
+            style={[
+              styles.completionModalContainer,
+              isOrderReminder && styles.orderCompletionModal,
+            ]}
+          >
             <View style={styles.completionModalHeader}>
-              <View style={[styles.completionIconWrapper, isOrderReminder && styles.orderCompletionIcon]}>
+              <View
+                style={[
+                  styles.completionIconWrapper,
+                  isOrderReminder && styles.orderCompletionIcon,
+                ]}
+              >
                 <IconComponent size={24} color="#fff" />
               </View>
               <Text style={styles.completionModalTitle}>{modalTitle}</Text>
@@ -454,46 +499,56 @@ export default function RemindersScreen() {
               {completedReminder && (
                 <View style={styles.completedReminderInfo}>
                   <Text style={styles.completedReminderTitle}>{completedReminder.title}</Text>
-                  <Text style={styles.completedReminderContact}>{completedReminder.contactName}</Text>
+                  <Text style={styles.completedReminderContact}>
+                    {completedReminder.contactName}
+                  </Text>
                   {isOrderReminder && (completedReminder as any).items && (
                     <Text style={styles.orderItemsCount}>
-                      {(completedReminder as any).items.length} items • ${(completedReminder as any).totalAmount?.toFixed(2)}
+                      {(completedReminder as any).items.length} items • $
+                      {(completedReminder as any).totalAmount?.toFixed(2)}
                     </Text>
                   )}
                 </View>
               )}
 
               <View style={styles.completionActions}>
-                <TouchableOpacity 
-                  style={[styles.completionActionButton, isOrderReminder ? styles.deliveredButton : styles.archiveButton]}
+                <Pressable
+                  style={[
+                    styles.completionActionButton,
+                    isOrderReminder ? styles.deliveredButton : styles.archiveButton,
+                  ]}
                   onPress={handleArchiveReminder}
                 >
-                  {isOrderReminder ? <Package size={20} color="#fff" /> : <Archive size={20} color="#fff" />}
+                  {isOrderReminder ? (
+                    <Package size={20} color="#fff" />
+                  ) : (
+                    <Archive size={20} color="#fff" />
+                  )}
                   <Text style={styles.completionActionText}>
                     {isOrderReminder ? 'Mark Delivered' : 'Archive'}
                   </Text>
                   <Text style={styles.completionActionSubtext}>
                     {isOrderReminder ? 'Order completed' : 'Save to archive'}
                   </Text>
-                </TouchableOpacity>
+                </Pressable>
 
-                <TouchableOpacity 
+                <Pressable
                   style={[styles.completionActionButton, styles.deleteButton]}
                   onPress={handleDeleteCompletedReminder}
                 >
                   <Trash2 size={20} color="#fff" />
                   <Text style={styles.completionActionText}>Delete</Text>
                   <Text style={styles.completionActionSubtext}>Remove reminder</Text>
-                </TouchableOpacity>
+                </Pressable>
 
-                <TouchableOpacity 
+                <Pressable
                   style={[styles.completionActionButton, styles.keepButton]}
                   onPress={handleKeepReminder}
                 >
                   <CheckCircle size={20} color="#fff" />
                   <Text style={styles.completionActionText}>Keep</Text>
                   <Text style={styles.completionActionSubtext}>Mark as completed</Text>
-                </TouchableOpacity>
+                </Pressable>
               </View>
             </View>
           </View>
@@ -509,7 +564,7 @@ export default function RemindersScreen() {
       <Text style={styles.emptyText}>
         Create reminders to follow up with your contacts after calls
       </Text>
-      <TouchableOpacity 
+      <Pressable
         style={styles.emptyActionButton}
         onPress={() => {
           if (contacts.length === 0) {
@@ -521,7 +576,7 @@ export default function RemindersScreen() {
       >
         <Plus size={20} color="#fff" />
         <Text style={styles.emptyActionButtonText}>Create First Reminder</Text>
-      </TouchableOpacity>
+      </Pressable>
     </View>
   );
 
@@ -533,7 +588,7 @@ export default function RemindersScreen() {
 
   const orderReminders = useMemo(() => {
     if (!showOrderReminders) return [];
-    
+
     return orders
       .filter(order => order.reminderDate && !order.reminderSent)
       .map(order => ({
@@ -541,7 +596,8 @@ export default function RemindersScreen() {
         contactId: order.contactId,
         contactName: order.contactName,
         title: `Order #${order.id.slice(-6)}`,
-        description: order.notes || `${order.items.length} items - Total: ${order.totalAmount.toFixed(2)}`,
+        description:
+          order.notes || `${order.items.length} items - Total: ${order.totalAmount.toFixed(2)}`,
         dueDate: new Date(order.reminderDate!),
         isCompleted: order.status === 'delivered',
         isArchived: false,
@@ -574,28 +630,27 @@ export default function RemindersScreen() {
   const pendingReminders = allReminders.filter(r => !r.isCompleted);
   const completedReminders = allReminders.filter(r => r.isCompleted);
   const overdueReminders = pendingReminders.filter(r => new Date(r.dueDate) < new Date());
-  const todayReminders = pendingReminders.filter(r => new Date(r.dueDate).toDateString() === new Date().toDateString());
+  const todayReminders = pendingReminders.filter(
+    r => new Date(r.dueDate).toDateString() === new Date().toDateString()
+  );
 
   // Stats for each type
   const callStats = {
     pending: callReminders.filter(r => !r.isCompleted).length,
     completed: callReminders.filter(r => r.isCompleted).length,
     overdue: callReminders.filter(r => !r.isCompleted && new Date(r.dueDate) < new Date()).length,
-    today: callReminders.filter(r => !r.isCompleted && new Date(r.dueDate).toDateString() === new Date().toDateString()).length,
+    today: callReminders.filter(
+      r => !r.isCompleted && new Date(r.dueDate).toDateString() === new Date().toDateString()
+    ).length,
   };
 
   const orderStats = {
     pending: orderReminders.filter(r => !r.isCompleted).length,
     completed: orderReminders.filter(r => r.isCompleted).length,
     overdue: orderReminders.filter(r => !r.isCompleted && new Date(r.dueDate) < new Date()).length,
-    today: orderReminders.filter(r => !r.isCompleted && new Date(r.dueDate).toDateString() === new Date().toDateString()).length,
-  };
-
-  const toggleSection = (section: string) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
+    today: orderReminders.filter(
+      r => !r.isCompleted && new Date(r.dueDate).toDateString() === new Date().toDateString()
+    ).length,
   };
 
   const renderReminderCard = (reminder: any) => {
@@ -603,36 +658,35 @@ export default function RemindersScreen() {
     const isToday = new Date(reminder.dueDate).toDateString() === new Date().toDateString();
     const contact = contacts.find(c => c.id === reminder.contactId);
     const isOrder = reminder.isOrder;
-    
+
     return (
-      <View key={reminder.id} style={[
-        styles.reminderCard,
-        reminder.isCompleted && styles.completedReminderCard,
-        isOverdue && styles.overdueReminderCard,
-        isOrder && styles.orderReminderCard
-      ]}>
-        <TouchableOpacity 
-          style={styles.reminderCheckbox}
-          onPress={() => handleReminderToggle(reminder)}
-        >
+      <View
+        key={reminder.id}
+        style={[
+          styles.reminderCard,
+          reminder.isCompleted && styles.completedReminderCard,
+          isOverdue && styles.overdueReminderCard,
+          isOrder && styles.orderReminderCard,
+        ]}
+      >
+        <Pressable style={styles.reminderCheckbox} onPress={() => handleReminderToggle(reminder)}>
           {reminder.isCompleted ? (
             <CheckCircle size={24} color="#34C759" />
           ) : (
-            <Circle size={24} color={isOverdue ? "#FF3B30" : isOrder ? "#FF9500" : "#8E8E93"} />
+            <Circle size={24} color={isOverdue ? '#FF3B30' : isOrder ? '#FF9500' : '#8E8E93'} />
           )}
-        </TouchableOpacity>
-        
+        </Pressable>
+
         <View style={styles.reminderContent}>
           <View style={styles.reminderHeader}>
             {isOrder ? <Package size={14} color="#FF9500" /> : <Phone size={14} color="#007AFF" />}
-            <Text style={[
-              styles.reminderTitle,
-              reminder.isCompleted && styles.completedReminderTitle
-            ]}>
+            <Text
+              style={[styles.reminderTitle, reminder.isCompleted && styles.completedReminderTitle]}
+            >
               {reminder.title}
             </Text>
           </View>
-          
+
           <View style={styles.reminderMeta}>
             <View style={styles.reminderMetaItem}>
               <User size={14} color="#8E8E93" />
@@ -643,20 +697,25 @@ export default function RemindersScreen() {
                 )}
               </Text>
             </View>
-            
+
             <View style={styles.reminderMetaItem}>
-              <Calendar size={14} color={isOverdue ? "#FF3B30" : isToday ? "#FF9500" : "#8E8E93"} />
-              <Text style={[
-                styles.reminderMetaText,
-                isOverdue && styles.overdueText,
-                isToday && styles.todayText
-              ]}>
+              <Calendar size={14} color={isOverdue ? '#FF3B30' : isToday ? '#FF9500' : '#8E8E93'} />
+              <Text
+                style={[
+                  styles.reminderMetaText,
+                  isOverdue && styles.overdueText,
+                  isToday && styles.todayText,
+                ]}
+              >
                 {isToday ? 'Today' : new Date(reminder.dueDate).toLocaleDateString()}
                 {' • '}
-                {new Date(reminder.dueDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                {new Date(reminder.dueDate).toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
               </Text>
             </View>
-            
+
             {isOverdue && !reminder.isCompleted && (
               <View style={styles.reminderMetaItem}>
                 <AlertCircle size={14} color="#FF3B30" />
@@ -664,19 +723,21 @@ export default function RemindersScreen() {
               </View>
             )}
           </View>
-          
+
           {reminder.description && (
-            <Text style={[
-              styles.reminderDescription,
-              reminder.isCompleted && styles.completedReminderDescription
-            ]}>
+            <Text
+              style={[
+                styles.reminderDescription,
+                reminder.isCompleted && styles.completedReminderDescription,
+              ]}
+            >
               {reminder.description}
             </Text>
           )}
         </View>
-        
+
         <View style={styles.reminderActions}>
-          <TouchableOpacity 
+          <Pressable
             style={styles.actionButton}
             onPress={() => {
               if (isOrder) {
@@ -685,22 +746,22 @@ export default function RemindersScreen() {
                   'Are you sure you want to delete this order reminder?',
                   [
                     { text: 'Cancel', style: 'cancel' },
-                    { 
-                      text: 'Delete', 
-                      style: 'destructive', 
+                    {
+                      text: 'Delete',
+                      style: 'destructive',
                       onPress: () => {
                         const order = orders.find(o => o.id === reminder.orderId);
                         if (order) {
-                          updateOrder({ 
-                            id: order.id, 
-                            updates: { 
+                          updateOrder({
+                            id: order.id,
+                            updates: {
                               reminderDate: undefined,
-                              reminderSent: false 
-                            } 
+                              reminderSent: false,
+                            },
                           });
                         }
-                      }
-                    }
+                      },
+                    },
                   ]
                 );
               } else {
@@ -709,31 +770,42 @@ export default function RemindersScreen() {
                   'Are you sure you want to delete this call reminder?',
                   [
                     { text: 'Cancel', style: 'cancel' },
-                    { text: 'Delete', style: 'destructive', onPress: () => deleteReminder(reminder.id) }
+                    {
+                      text: 'Delete',
+                      style: 'destructive',
+                      onPress: () => deleteReminder(reminder.id),
+                    },
                   ]
                 );
               }
             }}
           >
             <Trash2 size={18} color="#FF3B30" />
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </View>
     );
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <Stack.Screen options={{ title: 'Reminders' }} />
-      
+
       {callReminders.length === 0 && orderReminders.length === 0 ? (
         renderEmpty()
       ) : (
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
           {/* Stats Section */}
           <View style={styles.statsSection}>
             <Text style={styles.sectionTitle}>Summary</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.statsGrid}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.statsGrid}
+            >
               <View style={styles.statCard}>
                 <View style={[styles.iconContainer, { backgroundColor: '#007AFF15' }]}>
                   <Bell size={20} color="#007AFF" />
@@ -748,7 +820,9 @@ export default function RemindersScreen() {
                   <AlertCircle size={20} color="#FF3B30" />
                 </View>
                 <View style={styles.statContent}>
-                  <Text style={[styles.statNumber, { color: '#FF3B30' }]}>{overdueReminders.length}</Text>
+                  <Text style={[styles.statNumber, { color: '#FF3B30' }]}>
+                    {overdueReminders.length}
+                  </Text>
                   <Text style={styles.statLabel}>Overdue</Text>
                 </View>
               </View>
@@ -757,7 +831,9 @@ export default function RemindersScreen() {
                   <Clock size={20} color="#FF9500" />
                 </View>
                 <View style={styles.statContent}>
-                  <Text style={[styles.statNumber, { color: '#FF9500' }]}>{todayReminders.length}</Text>
+                  <Text style={[styles.statNumber, { color: '#FF9500' }]}>
+                    {todayReminders.length}
+                  </Text>
                   <Text style={styles.statLabel}>Today</Text>
                 </View>
               </View>
@@ -766,7 +842,9 @@ export default function RemindersScreen() {
                   <CheckCircle size={20} color="#34C759" />
                 </View>
                 <View style={styles.statContent}>
-                  <Text style={[styles.statNumber, { color: '#34C759' }]}>{completedReminders.length}</Text>
+                  <Text style={[styles.statNumber, { color: '#34C759' }]}>
+                    {completedReminders.length}
+                  </Text>
                   <Text style={styles.statLabel}>Done</Text>
                 </View>
               </View>
@@ -775,63 +853,69 @@ export default function RemindersScreen() {
 
           {/* Tab Selector */}
           <View style={styles.tabContainer}>
-            <TouchableOpacity 
+            <Pressable
               style={[styles.tab, activeTab === 'all' && styles.activeTab]}
               onPress={() => setActiveTab('all')}
             >
               <Text style={[styles.tabText, activeTab === 'all' && styles.activeTabText]}>All</Text>
               <View style={[styles.tabBadge, activeTab === 'all' && styles.activeTabBadge]}>
-                <Text style={[styles.tabBadgeText, activeTab === 'all' && styles.activeTabBadgeText]}>
+                <Text
+                  style={[styles.tabBadgeText, activeTab === 'all' && styles.activeTabBadgeText]}
+                >
                   {callReminders.length + orderReminders.length}
                 </Text>
               </View>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
+            </Pressable>
+
+            <Pressable
               style={[styles.tab, activeTab === 'calls' && styles.activeTab]}
               onPress={() => setActiveTab('calls')}
             >
               <Phone size={16} color={activeTab === 'calls' ? '#007AFF' : '#666'} />
-              <Text style={[styles.tabText, activeTab === 'calls' && styles.activeTabText]}>Calls</Text>
+              <Text style={[styles.tabText, activeTab === 'calls' && styles.activeTabText]}>
+                Calls
+              </Text>
               <View style={[styles.tabBadge, activeTab === 'calls' && styles.activeTabBadge]}>
-                <Text style={[styles.tabBadgeText, activeTab === 'calls' && styles.activeTabBadgeText]}>
+                <Text
+                  style={[styles.tabBadgeText, activeTab === 'calls' && styles.activeTabBadgeText]}
+                >
                   {callReminders.length}
                 </Text>
               </View>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
+            </Pressable>
+
+            <Pressable
               style={[styles.tab, activeTab === 'orders' && styles.activeTab]}
               onPress={() => setActiveTab('orders')}
             >
               <Package size={16} color={activeTab === 'orders' ? '#007AFF' : '#666'} />
-              <Text style={[styles.tabText, activeTab === 'orders' && styles.activeTabText]}>Orders</Text>
+              <Text style={[styles.tabText, activeTab === 'orders' && styles.activeTabText]}>
+                Orders
+              </Text>
               <View style={[styles.tabBadge, activeTab === 'orders' && styles.activeTabBadge]}>
-                <Text style={[styles.tabBadgeText, activeTab === 'orders' && styles.activeTabBadgeText]}>
+                <Text
+                  style={[styles.tabBadgeText, activeTab === 'orders' && styles.activeTabBadgeText]}
+                >
                   {orderReminders.length}
                 </Text>
               </View>
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           {/* Group By Selector */}
           <View style={styles.groupBySection}>
-            <TouchableOpacity 
-              style={styles.groupByButton}
-              onPress={() => setShowGroupByModal(true)}
-            >
+            <Pressable style={styles.groupByButton} onPress={() => setShowGroupByModal(true)}>
               <Filter size={16} color="#007AFF" />
-              <Text style={styles.groupByButtonText}>Group by: {groupBy.charAt(0).toUpperCase() + groupBy.slice(1)}</Text>
+              <Text style={styles.groupByButtonText}>
+                Group by: {groupBy.charAt(0).toUpperCase() + groupBy.slice(1)}
+              </Text>
               <ChevronDown size={16} color="#007AFF" />
-            </TouchableOpacity>
+            </Pressable>
             {activeTab === 'calls' && (
-              <TouchableOpacity 
-                style={styles.addButton}
-                onPress={() => setShowAddModal(true)}
-              >
+              <Pressable style={styles.addButton} onPress={() => setShowAddModal(true)}>
                 <Plus size={16} color="#fff" />
                 <Text style={styles.addButtonText}>Add</Text>
-              </TouchableOpacity>
+              </Pressable>
             )}
           </View>
 
@@ -868,7 +952,9 @@ export default function RemindersScreen() {
                       <Package size={18} color="#FF9500" />
                       <Text style={styles.sectionTitle}>Order Reminders</Text>
                       <View style={[styles.sectionBadge, { backgroundColor: '#FF950020' }]}>
-                        <Text style={[styles.sectionBadgeText, { color: '#FF9500' }]}>{orderStats.pending}</Text>
+                        <Text style={[styles.sectionBadgeText, { color: '#FF9500' }]}>
+                          {orderStats.pending}
+                        </Text>
                       </View>
                     </View>
                   </View>
@@ -903,7 +989,8 @@ export default function RemindersScreen() {
             <View style={styles.infoCard}>
               <Bell size={20} color="#007AFF" />
               <Text style={styles.infoText}>
-                Manage reminders for both calls and orders. Never miss important follow-ups or deliveries.
+                Manage reminders for both calls and orders. Never miss important follow-ups or
+                deliveries.
               </Text>
             </View>
           </View>
@@ -920,36 +1007,36 @@ export default function RemindersScreen() {
         transparent={true}
         onRequestClose={() => setShowGroupByModal(false)}
       >
-        <TouchableOpacity 
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setShowGroupByModal(false)}
-        >
+        <Pressable style={styles.modalOverlay} onPress={() => setShowGroupByModal(false)}>
           <View style={styles.groupByModalContainer}>
             <Text style={styles.groupByModalTitle}>Group Reminders By</Text>
-            {(['none', 'day', 'week', 'month', 'year'] as GroupByOption[]).map((option) => (
-              <TouchableOpacity
+            {(['none', 'day', 'week', 'month', 'year'] as GroupByOption[]).map(option => (
+              <Button
                 key={option}
                 style={[
                   styles.groupByOption,
-                  groupBy === option && styles.selectedGroupByOption
+                  groupBy === option && styles.selectedGroupByOption,
                 ]}
                 onPress={() => {
                   setGroupBy(option);
                   setShowGroupByModal(false);
                 }}
               >
-                <Text style={[
-                  styles.groupByOptionText,
-                  groupBy === option && styles.selectedGroupByOptionText
-                ]}>
-                  {option === 'none' ? 'No Grouping' : option.charAt(0).toUpperCase() + option.slice(1)}
+                <Text
+                  style={[
+                    styles.groupByOptionText,
+                    groupBy === option && styles.selectedGroupByOptionText,
+                  ]}
+                >
+                  {option === 'none'
+                    ? 'No Grouping'
+                    : option.charAt(0).toUpperCase() + option.slice(1)}
                 </Text>
                 {groupBy === option && <CheckCircle size={20} color="#007AFF" />}
-              </TouchableOpacity>
+              </Button>
             ))}
           </View>
-        </TouchableOpacity>
+        </Pressable>
       </Modal>
     </SafeAreaView>
   );

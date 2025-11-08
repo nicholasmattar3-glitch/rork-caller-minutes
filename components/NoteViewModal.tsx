@@ -1,10 +1,31 @@
 import React, { useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, Platform, Animated, PanResponder, Dimensions } from 'react-native';
-import { X, Clock, Phone, PhoneIncoming, PhoneOutgoing, Tag, Circle, Edit3, Folder } from 'lucide-react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Modal,
+  ScrollView,
+  Platform,
+  Animated,
+  PanResponder,
+  Dimensions,
+} from 'react-native';
+import {
+  X,
+  Clock,
+  Phone,
+  PhoneIncoming,
+  PhoneOutgoing,
+  Tag,
+  Circle,
+  Edit3,
+  Folder,
+} from 'lucide-react-native';
 import { CallNote } from '@/types/contact';
 import { useContacts } from '@/hooks/contacts-store';
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+const { width: screenWidth } = Dimensions.get('window');
 const CARD_WIDTH = screenWidth * 0.85;
 const CARD_HEIGHT = CARD_WIDTH * 0.6; // Business card aspect ratio
 
@@ -25,7 +46,7 @@ export default function NoteViewModal({ visible, note, onClose, onEdit }: NoteVi
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
-      
+
       onPanResponderGrant: () => {
         // Scale up slightly when touched
         Animated.spring(scale, {
@@ -35,23 +56,23 @@ export default function NoteViewModal({ visible, note, onClose, onEdit }: NoteVi
           friction: 7,
         }).start();
       },
-      
+
       onPanResponderMove: (evt, gestureState) => {
         // Update position
         pan.setValue({ x: gestureState.dx, y: gestureState.dy });
-        
+
         // Add rotation based on horizontal movement
-        const rotationValue = gestureState.dx / screenWidth * 15; // Max 15 degrees
+        const rotationValue = (gestureState.dx / screenWidth) * 15; // Max 15 degrees
         rotation.setValue(rotationValue);
       },
-      
+
       onPanResponderRelease: (evt, gestureState) => {
         // Calculate velocity for physics
         const velocity = {
           x: gestureState.vx,
           y: gestureState.vy,
         };
-        
+
         // Snap back to center with spring physics
         Animated.parallel([
           Animated.spring(pan, {
@@ -85,51 +106,75 @@ export default function NoteViewModal({ visible, note, onClose, onEdit }: NoteVi
 
     if (diffInHours < 24) {
       return noteDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } else if (diffInHours < 168) { // 7 days
-      return noteDate.toLocaleDateString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' });
+    } else if (diffInHours < 168) {
+      // 7 days
+      return noteDate.toLocaleDateString([], {
+        weekday: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
     } else {
-      return noteDate.toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      return noteDate.toLocaleDateString([], {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
     }
   };
-  
+
   const formatCallDuration = (seconds: number) => {
     if (seconds < 60) return `${seconds}s`;
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes}m ${remainingSeconds}s`;
   };
-  
+
   const formatCallTime = (date: Date) => {
     return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'follow-up': return '#FF9500';
-      case 'waiting-reply': return '#007AFF';
-      case 'closed': return '#34C759';
-      case 'other': return '#5856D6';
-      default: return '#999';
+      case 'follow-up':
+        return '#FF9500';
+      case 'waiting-reply':
+        return '#007AFF';
+      case 'closed':
+        return '#34C759';
+      case 'other':
+        return '#5856D6';
+      default:
+        return '#999';
     }
   };
 
   const getStatusText = (status: string, customStatus?: string) => {
     if (status === 'other' && customStatus) return customStatus;
     switch (status) {
-      case 'follow-up': return 'Follow-up';
-      case 'waiting-reply': return 'Waiting Reply';
-      case 'closed': return 'Closed';
-      case 'other': return 'Other';
-      default: return 'Unknown';
+      case 'follow-up':
+        return 'Follow-up';
+      case 'waiting-reply':
+        return 'Waiting Reply';
+      case 'closed':
+        return 'Closed';
+      case 'other':
+        return 'Other';
+      default:
+        return 'Unknown';
     }
   };
 
   const getPriorityColor = (priority?: 'low' | 'medium' | 'high') => {
     switch (priority) {
-      case 'low': return '#34C759';
-      case 'medium': return '#FF9500';
-      case 'high': return '#FF3B30';
-      default: return '#999';
+      case 'low':
+        return '#34C759';
+      case 'medium':
+        return '#FF9500';
+      case 'high':
+        return '#FF3B30';
+      default:
+        return '#999';
     }
   };
 
@@ -143,25 +188,21 @@ export default function NoteViewModal({ visible, note, onClose, onEdit }: NoteVi
   const folder = getFolder();
 
   return (
-    <Modal
-      visible={true}
-      animationType="slide"
-      presentationStyle="pageSheet"
-    >
+    <Modal visible={true} animationType="slide" presentationStyle="pageSheet">
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose} style={styles.headerButton}>
             <X size={24} color="#007AFF" />
           </TouchableOpacity>
-          
+
           <Text style={styles.title}>Call Note</Text>
-          
+
           <TouchableOpacity onPress={onEdit} style={styles.headerButton}>
             <Edit3 size={24} color="#007AFF" />
           </TouchableOpacity>
         </View>
 
-        <ScrollView 
+        <ScrollView
           style={styles.content}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
@@ -176,10 +217,12 @@ export default function NoteViewModal({ visible, note, onClose, onEdit }: NoteVi
                     { translateX: pan.x },
                     { translateY: pan.y },
                     { scale: scale },
-                    { rotate: rotation.interpolate({
-                      inputRange: [-15, 15],
-                      outputRange: ['-15deg', '15deg'],
-                    })},
+                    {
+                      rotate: rotation.interpolate({
+                        inputRange: [-15, 15],
+                        outputRange: ['-15deg', '15deg'],
+                      }),
+                    },
                   ],
                 },
               ]}
@@ -197,9 +240,9 @@ export default function NoteViewModal({ visible, note, onClose, onEdit }: NoteVi
                     <Text style={styles.cardTitle}>Contact</Text>
                   </View>
                 </View>
-                
+
                 <View style={styles.cardDivider} />
-                
+
                 <View style={styles.cardDetails}>
                   <View style={styles.cardDetailRow}>
                     <Phone size={14} color="#666" />
@@ -212,19 +255,19 @@ export default function NoteViewModal({ visible, note, onClose, onEdit }: NoteVi
                     </Text>
                   </View>
                 </View>
-                
+
                 <View style={styles.cardFooter}>
                   <Text style={styles.cardDate}>
                     {new Date(note.callStartTime).toLocaleDateString([], {
                       month: 'short',
                       day: 'numeric',
-                      year: 'numeric'
+                      year: 'numeric',
                     })}
                   </Text>
                 </View>
               </View>
             </Animated.View>
-            
+
             <Text style={styles.dragHint}>Drag the card to interact</Text>
           </View>
 
@@ -241,19 +284,15 @@ export default function NoteViewModal({ visible, note, onClose, onEdit }: NoteVi
                   {note.callDirection === 'inbound' ? 'Incoming' : 'Outgoing'}
                 </Text>
               </View>
-              
+
               <View style={styles.callDetailItem}>
                 <Clock size={16} color="#666" />
-                <Text style={styles.callDetailText}>
-                  {formatCallTime(note.callStartTime)}
-                </Text>
+                <Text style={styles.callDetailText}>{formatCallTime(note.callStartTime)}</Text>
               </View>
-              
+
               <View style={styles.callDetailItem}>
                 <Phone size={16} color="#666" />
-                <Text style={styles.callDetailText}>
-                  {formatCallDuration(note.callDuration)}
-                </Text>
+                <Text style={styles.callDetailText}>{formatCallDuration(note.callDuration)}</Text>
               </View>
             </View>
           </View>
@@ -263,19 +302,28 @@ export default function NoteViewModal({ visible, note, onClose, onEdit }: NoteVi
             <View style={styles.metaRow}>
               <View style={styles.metaItem}>
                 <Text style={styles.metaLabel}>Status</Text>
-                <View style={[styles.statusBadge, { backgroundColor: getStatusColor(note.status) + '20' }]}>
+                <View
+                  style={[
+                    styles.statusBadge,
+                    { backgroundColor: getStatusColor(note.status) + '20' },
+                  ]}
+                >
                   <Tag size={12} color={getStatusColor(note.status)} />
                   <Text style={[styles.statusText, { color: getStatusColor(note.status) }]}>
                     {getStatusText(note.status, note.customStatus)}
                   </Text>
                 </View>
               </View>
-              
+
               {note.priority && (
                 <View style={styles.metaItem}>
                   <Text style={styles.metaLabel}>Priority</Text>
                   <View style={styles.priorityBadge}>
-                    <Circle size={8} color={getPriorityColor(note.priority)} fill={getPriorityColor(note.priority)} />
+                    <Circle
+                      size={8}
+                      color={getPriorityColor(note.priority)}
+                      fill={getPriorityColor(note.priority)}
+                    />
                     <Text style={styles.priorityText}>
                       {note.priority.charAt(0).toUpperCase() + note.priority.slice(1)}
                     </Text>
@@ -283,7 +331,7 @@ export default function NoteViewModal({ visible, note, onClose, onEdit }: NoteVi
                 </View>
               )}
             </View>
-            
+
             {(note.category || folder) && (
               <View style={styles.metaRow}>
                 {note.category && (
@@ -294,7 +342,7 @@ export default function NoteViewModal({ visible, note, onClose, onEdit }: NoteVi
                     </View>
                   </View>
                 )}
-                
+
                 {folder && (
                   <View style={styles.metaItem}>
                     <Text style={styles.metaLabel}>Folder</Text>
