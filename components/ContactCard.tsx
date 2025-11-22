@@ -1,11 +1,20 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Modal, Image, PanResponder, Animated, useWindowDimensions } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  Modal,
+  Image,
+  PanResponder,
+  Animated,
+  useWindowDimensions,
+} from 'react-native';
 import { ChevronRight, User, CreditCard, X, Edit3 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Contact } from '@/types/contact';
 import { useContacts } from '@/hooks/contacts-store';
-
-
 
 interface ContactCardProps {
   contact: Contact;
@@ -15,20 +24,20 @@ export default function ContactCard({ contact }: ContactCardProps) {
   const { openCallNoteModal, updateContact } = useContacts();
   const [showBusinessCard, setShowBusinessCard] = useState(false);
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
-  
+
   // Business card dimensions
   const BUSINESS_CARD_WIDTH = screenWidth * 0.85;
   const BUSINESS_CARD_HEIGHT = BUSINESS_CARD_WIDTH * 0.63; // Standard business card ratio (3.5:2.2)
-  
+
   // Animation values for business card
   const pan = useRef(new Animated.ValueXY()).current;
   const scale = useRef(new Animated.Value(1)).current;
   const rotation = useRef(new Animated.Value(0)).current;
-  
+
   // Calculate center position
   const centerX = (screenWidth - BUSINESS_CARD_WIDTH) / 2;
   const centerY = (screenHeight - BUSINESS_CARD_HEIGHT) / 2;
-  
+
   // Pan responder for drag functionality
   const panResponder = useRef(
     PanResponder.create({
@@ -43,7 +52,7 @@ export default function ContactCard({ contact }: ContactCardProps) {
           Animated.spring(rotation, {
             toValue: (Math.random() - 0.5) * 0.1, // Random slight rotation
             useNativeDriver: true,
-          })
+          }),
         ]).start();
       },
       onPanResponderMove: (evt, gestureState) => {
@@ -52,12 +61,12 @@ export default function ContactCard({ contact }: ContactCardProps) {
           x: gestureState.dx,
           y: gestureState.dy,
         });
-        
+
         // Add dynamic rotation based on movement
         const rotationValue = gestureState.dx * 0.0005;
         rotation.setValue(rotationValue);
       },
-      onPanResponderRelease: (evt, gestureState) => {
+      onPanResponderRelease: () => {
         // Snap back to center with spring animation
         Animated.parallel([
           Animated.spring(pan, {
@@ -77,12 +86,12 @@ export default function ContactCard({ contact }: ContactCardProps) {
             tension: 100,
             friction: 8,
             useNativeDriver: true,
-          })
+          }),
         ]).start();
       },
     })
   ).current;
-  
+
   // Reset animation values when modal opens
   const handleShowBusinessCard = () => {
     pan.setValue({ x: 0, y: 0 });
@@ -94,96 +103,94 @@ export default function ContactCard({ contact }: ContactCardProps) {
   const handleContactPress = () => {
     const options: any[] = [
       { text: 'Cancel', style: 'cancel' as const },
-      { 
-        text: 'Create Call Note', 
-        onPress: () => openCallNoteModal(contact)
+      {
+        text: 'Create Call Note',
+        onPress: () => openCallNoteModal(contact),
       },
     ];
 
     if (contact.businessCardImage) {
       options.splice(1, 0, {
         text: 'View Business Card',
-        onPress: () => handleShowBusinessCard()
+        onPress: () => handleShowBusinessCard(),
       });
     }
 
-    Alert.alert(
-      contact.name,
-      contact.phoneNumber,
-      options
-    );
+    Alert.alert(contact.name, contact.phoneNumber, options);
   };
 
   const showBusinessCardEditOptions = () => {
-    Alert.alert(
-      'Business Card Options',
-      'What would you like to do?',
-      [
-        {
-          text: 'Change Business Card',
-          onPress: async () => {
-            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-            
-            if (status !== 'granted') {
-              Alert.alert('Permission Denied', 'We need camera roll permissions to attach business cards.');
-              return;
-            }
+    Alert.alert('Business Card Options', 'What would you like to do?', [
+      {
+        text: 'Change Business Card',
+        onPress: async () => {
+          const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
-            const result = await ImagePicker.launchImageLibraryAsync({
-              mediaTypes: ImagePicker.MediaTypeOptions.Images,
-              allowsEditing: false,
-              quality: 0.8,
-              base64: false,
+          if (status !== 'granted') {
+            Alert.alert(
+              'Permission Denied',
+              'We need camera roll permissions to attach business cards.'
+            );
+            return;
+          }
+
+          const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: false,
+            quality: 0.8,
+            base64: false,
+          });
+
+          if (!result.canceled && result.assets[0]) {
+            updateContact({
+              id: contact.id,
+              updates: { businessCardImage: result.assets[0].uri },
             });
-
-            if (!result.canceled && result.assets[0]) {
-              updateContact({ 
-                id: contact.id, 
-                updates: { businessCardImage: result.assets[0].uri } 
-              });
-              setShowBusinessCard(false);
-              // Reset animation values
-              pan.setValue({ x: 0, y: 0 });
-              scale.setValue(1);
-              rotation.setValue(0);
-            }
+            setShowBusinessCard(false);
+            // Reset animation values
+            pan.setValue({ x: 0, y: 0 });
+            scale.setValue(1);
+            rotation.setValue(0);
           }
         },
-        {
-          text: 'Take New Photo',
-          onPress: async () => {
-            const { status } = await ImagePicker.requestCameraPermissionsAsync();
-            
-            if (status !== 'granted') {
-              Alert.alert('Permission Denied', 'We need camera permissions to take photos of business cards.');
-              return;
-            }
+      },
+      {
+        text: 'Take New Photo',
+        onPress: async () => {
+          const { status } = await ImagePicker.requestCameraPermissionsAsync();
 
-            const result = await ImagePicker.launchCameraAsync({
-              allowsEditing: false,
-              quality: 0.8,
-              base64: false,
+          if (status !== 'granted') {
+            Alert.alert(
+              'Permission Denied',
+              'We need camera permissions to take photos of business cards.'
+            );
+            return;
+          }
+
+          const result = await ImagePicker.launchCameraAsync({
+            allowsEditing: false,
+            quality: 0.8,
+            base64: false,
+          });
+
+          if (!result.canceled && result.assets[0]) {
+            updateContact({
+              id: contact.id,
+              updates: { businessCardImage: result.assets[0].uri },
             });
-
-            if (!result.canceled && result.assets[0]) {
-              updateContact({ 
-                id: contact.id, 
-                updates: { businessCardImage: result.assets[0].uri } 
-              });
-              setShowBusinessCard(false);
-              // Reset animation values
-              pan.setValue({ x: 0, y: 0 });
-              scale.setValue(1);
-              rotation.setValue(0);
-            }
+            setShowBusinessCard(false);
+            // Reset animation values
+            pan.setValue({ x: 0, y: 0 });
+            scale.setValue(1);
+            rotation.setValue(0);
           }
         },
-        {
-          text: 'Cancel',
-          style: 'cancel'
-        }
-      ]
-    );
+      },
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+    ]);
   };
 
   return (
@@ -192,7 +199,7 @@ export default function ContactCard({ contact }: ContactCardProps) {
         <View style={styles.avatar}>
           <User size={24} color="#666" />
         </View>
-        
+
         <View style={styles.info}>
           <Text style={styles.name}>{contact.name}</Text>
           <View style={styles.phoneRow}>
@@ -223,7 +230,7 @@ export default function ContactCard({ contact }: ContactCardProps) {
         }}
       >
         <View style={styles.modalOverlay}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.closeButton}
             onPress={() => {
               setShowBusinessCard(false);
@@ -235,15 +242,12 @@ export default function ContactCard({ contact }: ContactCardProps) {
           >
             <X size={28} color="#fff" />
           </TouchableOpacity>
-          
+
           {/* Edit Business Card Button */}
-          <TouchableOpacity 
-            style={styles.editButton}
-            onPress={() => showBusinessCardEditOptions()}
-          >
+          <TouchableOpacity style={styles.editButton} onPress={() => showBusinessCardEditOptions()}>
             <Edit3 size={20} color="#fff" />
           </TouchableOpacity>
-          
+
           {/* Interactive Business Card */}
           <Animated.View
             style={[
@@ -257,27 +261,29 @@ export default function ContactCard({ contact }: ContactCardProps) {
                   { translateX: pan.x },
                   { translateY: pan.y },
                   { scale: scale },
-                  { rotate: rotation.interpolate({
-                    inputRange: [-1, 1],
-                    outputRange: ['-57.2958deg', '57.2958deg'] // Convert radians to degrees
-                  })}
-                ]
-              }
+                  {
+                    rotate: rotation.interpolate({
+                      inputRange: [-1, 1],
+                      outputRange: ['-57.2958deg', '57.2958deg'], // Convert radians to degrees
+                    }),
+                  },
+                ],
+              },
             ]}
             {...panResponder.panHandlers}
           >
             {contact.businessCardImage && (
-              <Image 
+              <Image
                 source={{ uri: contact.businessCardImage }}
                 style={styles.businessCardImage}
                 resizeMode="cover"
               />
             )}
-            
+
             {/* Card shadow/border effect */}
             <View style={styles.cardShadow} />
           </Animated.View>
-          
+
           <View style={styles.modalFooter}>
             <Text style={styles.modalTitle}>{contact.name}&apos;s Business Card</Text>
             <Text style={styles.modalSubtitle}>Drag to move • Release to snap back</Text>

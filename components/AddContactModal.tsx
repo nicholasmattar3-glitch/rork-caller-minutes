@@ -1,6 +1,34 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, Alert, FlatList, ScrollView, Animated, Dimensions, Image, PanResponder } from 'react-native';
-import { X, UserPlus, User, Phone, Search, Plus, Camera, Image as ImageIcon, Maximize2, CreditCard, Edit3 } from 'lucide-react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
+  FlatList,
+  ScrollView,
+  Animated,
+  Dimensions,
+  Image,
+  PanResponder,
+} from 'react-native';
+import {
+  X,
+  UserPlus,
+  User,
+  Phone,
+  Search,
+  Plus,
+  Camera,
+  Image as ImageIcon,
+  Maximize2,
+  CreditCard,
+  Edit3,
+} from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useContacts } from '@/hooks/contacts-store';
 import { Contact } from '@/types/contact';
@@ -13,7 +41,12 @@ interface AddContactModalProps {
   onSelectContact?: (contact: Contact) => void;
 }
 
-export default function AddContactModal({ visible, onClose, onAdd, onSelectContact }: AddContactModalProps) {
+export default function AddContactModal({
+  visible,
+  onClose,
+  onAdd,
+  onSelectContact,
+}: AddContactModalProps) {
   const { contacts, openCallNoteModal, updateContact } = useContacts();
   const [name, setName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -29,23 +62,23 @@ export default function AddContactModal({ visible, onClose, onAdd, onSelectConta
   const [showCardEditor, setShowCardEditor] = useState(false);
   const [cardEditorImage, setCardEditorImage] = useState<string | null>(null);
   const [cardEditorContactName, setCardEditorContactName] = useState<string>('');
-  
+
   // Get dimensions inside component
   const { width, height } = Dimensions.get('window');
-  
+
   // Animation values for radiating effect from bottom-left corner
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const translateXAnim = useRef(new Animated.Value(-width * 0.45)).current;
   const translateYAnim = useRef(new Animated.Value(height * 0.45)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
-  
+
   // Business card animation values for interactive movement
   const cardPan = useRef(new Animated.ValueXY()).current;
   const cardScale = useRef(new Animated.Value(1)).current;
   const cardRotation = useRef(new Animated.Value(0)).current;
   const [isDragging, setIsDragging] = useState(false);
   const lastGestureRef = useRef({ vx: 0, vy: 0 });
-  
+
   useEffect(() => {
     if (visible) {
       // Start animation immediately with no delay for seamless transition
@@ -106,7 +139,7 @@ export default function AddContactModal({ visible, onClose, onAdd, onSelectConta
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
+
     if (status !== 'granted') {
       Alert.alert('Permission Denied', 'We need camera roll permissions to attach business cards.');
       return;
@@ -128,9 +161,12 @@ export default function AddContactModal({ visible, onClose, onAdd, onSelectConta
 
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    
+
     if (status !== 'granted') {
-      Alert.alert('Permission Denied', 'We need camera permissions to take photos of business cards.');
+      Alert.alert(
+        'Permission Denied',
+        'We need camera permissions to take photos of business cards.'
+      );
       return;
     }
 
@@ -228,9 +264,10 @@ export default function AddContactModal({ visible, onClose, onAdd, onSelectConta
     }
   };
 
-  const filteredContacts = contacts.filter(contact => 
-    contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    contact.phoneNumber.includes(searchQuery)
+  const filteredContacts = contacts.filter(
+    contact =>
+      contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      contact.phoneNumber.includes(searchQuery)
   );
 
   const handleBusinessCardView = (contact: Contact) => {
@@ -246,60 +283,55 @@ export default function AddContactModal({ visible, onClose, onAdd, onSelectConta
     setEditingBusinessCard(contact.businessCardImage || null);
   };
 
-  const handleBusinessCardEdit = (contact: Contact) => {
-    setShowBusinessCardOptions(contact.id);
-  };
-
   const showBusinessCardEditOptions = (contact: Contact) => {
     setShowBusinessCardOptions(null);
-    Alert.alert(
-      'Business Card Options',
-      'What would you like to do?',
-      [
-        {
-          text: 'Change Business Card',
-          onPress: () => {
+    Alert.alert('Business Card Options', 'What would you like to do?', [
+      {
+        text: 'Change Business Card',
+        onPress: () => {
+          setEditingContactId(contact.id);
+          setEditingBusinessCard(contact.businessCardImage || null);
+        },
+      },
+      {
+        text: 'Take New Photo',
+        onPress: async () => {
+          const { status } = await ImagePicker.requestCameraPermissionsAsync();
+
+          if (status !== 'granted') {
+            Alert.alert(
+              'Permission Denied',
+              'We need camera permissions to take photos of business cards.'
+            );
+            return;
+          }
+
+          const result = await ImagePicker.launchCameraAsync({
+            allowsEditing: false,
+            quality: 0.8,
+            base64: false,
+          });
+
+          if (!result.canceled && result.assets[0]) {
+            setCardEditorImage(result.assets[0].uri);
+            setCardEditorContactName(contact.name);
             setEditingContactId(contact.id);
-            setEditingBusinessCard(contact.businessCardImage || null);
+            setShowCardEditor(true);
           }
         },
-        {
-          text: 'Take New Photo',
-          onPress: async () => {
-            const { status } = await ImagePicker.requestCameraPermissionsAsync();
-            
-            if (status !== 'granted') {
-              Alert.alert('Permission Denied', 'We need camera permissions to take photos of business cards.');
-              return;
-            }
-
-            const result = await ImagePicker.launchCameraAsync({
-              allowsEditing: false,
-              quality: 0.8,
-              base64: false,
-            });
-
-            if (!result.canceled && result.assets[0]) {
-              setCardEditorImage(result.assets[0].uri);
-              setCardEditorContactName(contact.name);
-              setEditingContactId(contact.id);
-              setShowCardEditor(true);
-            }
-          }
-        },
-        {
-          text: 'Cancel',
-          style: 'cancel'
-        }
-      ]
-    );
+      },
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+    ]);
   };
 
   const saveBusinessCard = async () => {
     if (editingContactId && editingBusinessCard) {
-      updateContact({ 
-        id: editingContactId, 
-        updates: { businessCardImage: editingBusinessCard } 
+      updateContact({
+        id: editingContactId,
+        updates: { businessCardImage: editingBusinessCard },
       });
     }
     setEditingContactId(null);
@@ -317,13 +349,13 @@ export default function AddContactModal({ visible, onClose, onAdd, onSelectConta
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: (evt, gestureState) => {
+      onPanResponderGrant: () => {
         console.log('Starting drag');
         setIsDragging(true);
         // Stop any ongoing animations
         cardPan.stopAnimation();
         cardPan.extractOffset();
-        
+
         // Add slight scale and dynamic rotation when starting drag
         Animated.parallel([
           Animated.spring(cardScale, {
@@ -340,11 +372,11 @@ export default function AddContactModal({ visible, onClose, onAdd, onSelectConta
           x: gestureState.dx,
           y: gestureState.dy,
         });
-        
+
         // Dynamic rotation based on horizontal movement with limits
         const rotationValue = Math.max(-20, Math.min(20, gestureState.dx * 0.08));
         cardRotation.setValue(rotationValue);
-        
+
         // Store velocity for momentum
         lastGestureRef.current = { vx: gestureState.vx, vy: gestureState.vy };
       },
@@ -352,12 +384,10 @@ export default function AddContactModal({ visible, onClose, onAdd, onSelectConta
         console.log('Releasing drag with velocity:', gestureState.vx, gestureState.vy);
         setIsDragging(false);
         cardPan.flattenOffset();
-        
+
         // Calculate momentum based on velocity
         const velocity = Math.sqrt(gestureState.vx ** 2 + gestureState.vy ** 2);
-        const momentumX = gestureState.dx + gestureState.vx * 200;
-        const momentumY = gestureState.dy + gestureState.vy * 200;
-        
+
         // If velocity is high, add momentum before snapping back
         if (velocity > 0.5) {
           // First, continue movement with momentum
@@ -372,7 +402,7 @@ export default function AddContactModal({ visible, onClose, onAdd, onSelectConta
                 toValue: gestureState.vx * 0.2,
                 duration: 200,
                 useNativeDriver: true,
-              })
+              }),
             ]),
             // Then snap back to center with spring physics
             Animated.parallel([
@@ -393,8 +423,8 @@ export default function AddContactModal({ visible, onClose, onAdd, onSelectConta
                 tension: 60,
                 friction: 8,
                 useNativeDriver: true,
-              })
-            ])
+              }),
+            ]),
           ]).start();
         } else {
           // Direct snap back for slow movements
@@ -416,7 +446,7 @@ export default function AddContactModal({ visible, onClose, onAdd, onSelectConta
               tension: 80,
               friction: 8,
               useNativeDriver: true,
-            })
+            }),
           ]).start();
         }
       },
@@ -425,7 +455,7 @@ export default function AddContactModal({ visible, onClose, onAdd, onSelectConta
 
   const pickImageForContact = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
+
     if (status !== 'granted') {
       Alert.alert('Permission Denied', 'We need camera roll permissions to attach business cards.');
       return;
@@ -448,9 +478,12 @@ export default function AddContactModal({ visible, onClose, onAdd, onSelectConta
 
   const takePhotoForContact = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    
+
     if (status !== 'granted') {
-      Alert.alert('Permission Denied', 'We need camera permissions to take photos of business cards.');
+      Alert.alert(
+        'Permission Denied',
+        'We need camera permissions to take photos of business cards.'
+      );
       return;
     }
 
@@ -470,12 +503,12 @@ export default function AddContactModal({ visible, onClose, onAdd, onSelectConta
 
   const renderContact = ({ item }: { item: Contact }) => {
     console.log('Rendering contact:', item.name, 'businessCardImage:', item.businessCardImage);
-    
+
     return (
       <View style={styles.contactItemContainer}>
         {/* Edit Business Card Button - only show if business card exists */}
         {item.businessCardImage && (
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.editBusinessCardButton}
             onPress={() => showBusinessCardEditOptions(item)}
             activeOpacity={0.7}
@@ -483,9 +516,9 @@ export default function AddContactModal({ visible, onClose, onAdd, onSelectConta
             <Edit3 size={16} color="#007AFF" />
           </TouchableOpacity>
         )}
-        
-        <TouchableOpacity 
-          style={styles.contactItem} 
+
+        <TouchableOpacity
+          style={styles.contactItem}
           onPress={() => handleContactSelect(item)}
           activeOpacity={0.7}
         >
@@ -506,10 +539,10 @@ export default function AddContactModal({ visible, onClose, onAdd, onSelectConta
             </View>
           </View>
         </TouchableOpacity>
-        
+
         {/* Add Business Card Button - only show if no business card exists */}
         {!item.businessCardImage && (
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.addBusinessCardButton}
             onPress={() => handleAddBusinessCard(item)}
             activeOpacity={0.7}
@@ -517,15 +550,15 @@ export default function AddContactModal({ visible, onClose, onAdd, onSelectConta
             <Plus size={18} color="#007AFF" />
           </TouchableOpacity>
         )}
-        
+
         {/* Business Card Thumbnail */}
         {item.businessCardImage && (
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.businessCardThumbnail}
             onPress={() => handleBusinessCardView(item)}
             activeOpacity={0.8}
           >
-            <Image 
+            <Image
               source={{ uri: item.businessCardImage }}
               style={styles.thumbnailImage}
               resizeMode="cover"
@@ -546,12 +579,12 @@ export default function AddContactModal({ visible, onClose, onAdd, onSelectConta
       transparent={true}
       presentationStyle="overFullScreen"
     >
-      <Animated.View 
+      <Animated.View
         style={[
           styles.modalOverlay,
           {
             opacity: opacityAnim,
-          }
+          },
         ]}
       >
         <Animated.View
@@ -568,173 +601,165 @@ export default function AddContactModal({ visible, onClose, onAdd, onSelectConta
             },
           ]}
         >
-          <KeyboardAvoidingView 
+          <KeyboardAvoidingView
             style={styles.container}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           >
-        <View style={styles.header}>
-          <TouchableOpacity onPress={handleClose}>
-            <X size={24} color="#007AFF" />
-          </TouchableOpacity>
-          
-          <Text style={styles.title}>
-            {showAddForm ? 'New Contact' : 'Select Contact'}
-          </Text>
-          
-          {showAddForm ? (
-            <TouchableOpacity onPress={handleAdd}>
-              <UserPlus size={24} color="#007AFF" />
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity onPress={() => setShowAddForm(true)}>
-              <Plus size={24} color="#007AFF" />
-            </TouchableOpacity>
-          )}
-        </View>
+            <View style={styles.header}>
+              <TouchableOpacity onPress={handleClose}>
+                <X size={24} color="#007AFF" />
+              </TouchableOpacity>
 
-        {showAddForm ? (
-          <ScrollView style={styles.content}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Name</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter contact name"
-                placeholderTextColor="#999"
-                value={name}
-                onChangeText={setName}
-                autoFocus
-              />
-            </View>
+              <Text style={styles.title}>{showAddForm ? 'New Contact' : 'Select Contact'}</Text>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Phone Number</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter phone number"
-                placeholderTextColor="#999"
-                value={phoneNumber}
-                onChangeText={setPhoneNumber}
-                keyboardType="phone-pad"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Business Card</Text>
-              {businessCardImage ? (
-                <View style={styles.imageContainer}>
-                  <TouchableOpacity 
-                    style={styles.imagePreview}
-                    onPress={() => setShowImageViewer(true)}
-                    activeOpacity={0.9}
-                  >
-                    <Image 
-                      source={{ uri: businessCardImage }} 
-                      style={styles.businessCardImage}
-                      resizeMode="cover"
-                    />
-                    <View style={styles.imageOverlay}>
-                      <Maximize2 size={24} color="#fff" />
-                      <Text style={styles.imageOverlayText}>Tap to view</Text>
-                    </View>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={styles.removeImageButton}
-                    onPress={() => setBusinessCardImage(null)}
-                  >
-                    <X size={20} color="#FF3B30" />
-                  </TouchableOpacity>
-                </View>
+              {showAddForm ? (
+                <TouchableOpacity onPress={handleAdd}>
+                  <UserPlus size={24} color="#007AFF" />
+                </TouchableOpacity>
               ) : (
-                <View style={styles.imageButtonsContainer}>
-                  <TouchableOpacity 
-                    style={styles.imageButton}
-                    onPress={takePhoto}
-                  >
-                    <Camera size={24} color="#007AFF" />
-                    <Text style={styles.imageButtonText}>Take Photo</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={styles.imageButton}
-                    onPress={pickImage}
-                  >
-                    <ImageIcon size={24} color="#007AFF" />
-                    <Text style={styles.imageButtonText}>Choose Photo</Text>
-                  </TouchableOpacity>
-                </View>
+                <TouchableOpacity onPress={() => setShowAddForm(true)}>
+                  <Plus size={24} color="#007AFF" />
+                </TouchableOpacity>
               )}
             </View>
 
-            <View style={styles.formFooter}>
-              <TouchableOpacity 
-                style={styles.cancelButton} 
-                onPress={() => {
-                  setShowAddForm(false);
-                  setName('');
-                  setPhoneNumber('');
-                  setBusinessCardImage(null);
-                  setEditingContactId(null);
-                  setEditingBusinessCard(null);
-                  setShowBusinessCardOptions(null);
-                }}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.addButton} onPress={handleAdd}>
-                <Text style={styles.addButtonText}>Add Contact</Text>
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
-        ) : (
-          <View style={styles.contactsList}>
-            <View style={styles.searchContainer}>
-              <View style={styles.searchInputWrapper}>
-                <Search size={18} color="#8E8E93" />
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder="Search contacts..."
-                  placeholderTextColor="#8E8E93"
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  returnKeyType="search"
-                />
-                {searchQuery.length > 0 && (
-                  <TouchableOpacity onPress={() => setSearchQuery('')}>
-                    <X size={18} color="#8E8E93" />
-                  </TouchableOpacity>
-                )}
-              </View>
-            </View>
+            {showAddForm ? (
+              <ScrollView style={styles.content}>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Name</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter contact name"
+                    placeholderTextColor="#999"
+                    value={name}
+                    onChangeText={setName}
+                    autoFocus
+                  />
+                </View>
 
-            {filteredContacts.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <User size={48} color="#ccc" />
-                <Text style={styles.emptyTitle}>
-                  {searchQuery ? 'No contacts found' : 'No contacts yet'}
-                </Text>
-                <Text style={styles.emptyText}>
-                  {searchQuery ? 'Try a different search' : 'Add a contact to get started'}
-                </Text>
-                {!searchQuery && (
-                  <TouchableOpacity 
-                    style={styles.emptyAddButton}
-                    onPress={() => setShowAddForm(true)}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Phone Number</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter phone number"
+                    placeholderTextColor="#999"
+                    value={phoneNumber}
+                    onChangeText={setPhoneNumber}
+                    keyboardType="phone-pad"
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Business Card</Text>
+                  {businessCardImage ? (
+                    <View style={styles.imageContainer}>
+                      <TouchableOpacity
+                        style={styles.imagePreview}
+                        onPress={() => setShowImageViewer(true)}
+                        activeOpacity={0.9}
+                      >
+                        <Image
+                          source={{ uri: businessCardImage }}
+                          style={styles.businessCardImage}
+                          resizeMode="cover"
+                        />
+                        <View style={styles.imageOverlay}>
+                          <Maximize2 size={24} color="#fff" />
+                          <Text style={styles.imageOverlayText}>Tap to view</Text>
+                        </View>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.removeImageButton}
+                        onPress={() => setBusinessCardImage(null)}
+                      >
+                        <X size={20} color="#FF3B30" />
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <View style={styles.imageButtonsContainer}>
+                      <TouchableOpacity style={styles.imageButton} onPress={takePhoto}>
+                        <Camera size={24} color="#007AFF" />
+                        <Text style={styles.imageButtonText}>Take Photo</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.imageButton} onPress={pickImage}>
+                        <ImageIcon size={24} color="#007AFF" />
+                        <Text style={styles.imageButtonText}>Choose Photo</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+
+                <View style={styles.formFooter}>
+                  <TouchableOpacity
+                    style={styles.cancelButton}
+                    onPress={() => {
+                      setShowAddForm(false);
+                      setName('');
+                      setPhoneNumber('');
+                      setBusinessCardImage(null);
+                      setEditingContactId(null);
+                      setEditingBusinessCard(null);
+                      setShowBusinessCardOptions(null);
+                    }}
                   >
-                    <Plus size={20} color="#007AFF" />
-                    <Text style={styles.emptyAddButtonText}>Add Contact</Text>
+                    <Text style={styles.cancelButtonText}>Cancel</Text>
                   </TouchableOpacity>
+                  <TouchableOpacity style={styles.addButton} onPress={handleAdd}>
+                    <Text style={styles.addButtonText}>Add Contact</Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            ) : (
+              <View style={styles.contactsList}>
+                <View style={styles.searchContainer}>
+                  <View style={styles.searchInputWrapper}>
+                    <Search size={18} color="#8E8E93" />
+                    <TextInput
+                      style={styles.searchInput}
+                      placeholder="Search contacts..."
+                      placeholderTextColor="#8E8E93"
+                      value={searchQuery}
+                      onChangeText={setSearchQuery}
+                      returnKeyType="search"
+                    />
+                    {searchQuery.length > 0 && (
+                      <TouchableOpacity onPress={() => setSearchQuery('')}>
+                        <X size={18} color="#8E8E93" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+
+                {filteredContacts.length === 0 ? (
+                  <View style={styles.emptyContainer}>
+                    <User size={48} color="#ccc" />
+                    <Text style={styles.emptyTitle}>
+                      {searchQuery ? 'No contacts found' : 'No contacts yet'}
+                    </Text>
+                    <Text style={styles.emptyText}>
+                      {searchQuery ? 'Try a different search' : 'Add a contact to get started'}
+                    </Text>
+                    {!searchQuery && (
+                      <TouchableOpacity
+                        style={styles.emptyAddButton}
+                        onPress={() => setShowAddForm(true)}
+                      >
+                        <Plus size={20} color="#007AFF" />
+                        <Text style={styles.emptyAddButtonText}>Add Contact</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                ) : (
+                  <FlatList
+                    data={filteredContacts}
+                    renderItem={renderContact}
+                    keyExtractor={item => item.id}
+                    contentContainerStyle={styles.listContent}
+                    showsVerticalScrollIndicator={false}
+                  />
                 )}
               </View>
-            ) : (
-              <FlatList
-                data={filteredContacts}
-                renderItem={renderContact}
-                keyExtractor={(item) => item.id}
-                contentContainerStyle={styles.listContent}
-                showsVerticalScrollIndicator={false}
-              />
             )}
-          </View>
-        )}
           </KeyboardAvoidingView>
         </Animated.View>
       </Animated.View>
@@ -755,7 +780,7 @@ export default function AddContactModal({ visible, onClose, onAdd, onSelectConta
         }}
       >
         <View style={styles.imageViewerOverlay}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.imageViewerCloseButton}
             onPress={() => {
               setShowImageViewer(false);
@@ -771,7 +796,7 @@ export default function AddContactModal({ visible, onClose, onAdd, onSelectConta
           </TouchableOpacity>
           {/* Edit Button - opposite corner from X button */}
           {viewingBusinessCard && viewingContactName && (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.imageViewerEditButton}
               onPress={() => {
                 // Find the contact by name to get its ID
@@ -801,51 +826,51 @@ export default function AddContactModal({ visible, onClose, onAdd, onSelectConta
                       { translateX: cardPan.x },
                       { translateY: cardPan.y },
                       { scale: cardScale },
-                      { 
+                      {
                         rotate: cardRotation.interpolate({
                           inputRange: [-20, 20],
-                          outputRange: ['-20deg', '20deg']
-                        })
+                          outputRange: ['-20deg', '20deg'],
+                        }),
                       },
                       {
-                        perspective: 1000
-                      }
+                        perspective: 1000,
+                      },
                     ],
                     opacity: isDragging ? 0.98 : 1,
-                  }
+                  },
                 ]}
               >
-                <Animated.View 
+                <Animated.View
                   style={[
                     styles.businessCardFrame,
                     {
                       shadowOpacity: cardScale.interpolate({
                         inputRange: [1, 1.05],
-                        outputRange: [0.4, 0.6]
+                        outputRange: [0.4, 0.6],
                       }),
                       shadowRadius: cardScale.interpolate({
                         inputRange: [1, 1.05],
-                        outputRange: [20, 30]
+                        outputRange: [20, 30],
                       }),
-                    }
+                    },
                   ]}
                 >
-                  <Image 
+                  <Image
                     source={{ uri: businessCardImage || viewingBusinessCard || '' }}
                     style={styles.businessCardCropped}
                     resizeMode="cover"
                   />
-                  <Animated.View 
+                  <Animated.View
                     style={[
                       styles.dragIndicator,
                       {
                         opacity: isDragging ? 1 : 0,
                         transform: [
                           {
-                            scale: isDragging ? 1 : 0.8
-                          }
-                        ]
-                      }
+                            scale: isDragging ? 1 : 0.8,
+                          },
+                        ],
+                      },
                     ]}
                   >
                     <View style={styles.dragDot} />
@@ -857,19 +882,21 @@ export default function AddContactModal({ visible, onClose, onAdd, onSelectConta
               </Animated.View>
             )}
           </View>
-          <Animated.View 
+          <Animated.View
             style={[
               styles.imageViewerFooter,
               {
-                opacity: isDragging ? 0.3 : 1
-              }
+                opacity: isDragging ? 0.3 : 1,
+              },
             ]}
           >
             <Text style={styles.imageViewerTitle}>
               {viewingContactName ? `${viewingContactName}'s Business Card` : 'Business Card'}
             </Text>
             <Text style={styles.imageViewerSubtitle}>
-              {isDragging ? 'Release to snap back • Swipe for momentum effect' : 'Drag to move • Swipe for momentum • Auto-centers'}
+              {isDragging
+                ? 'Release to snap back • Swipe for momentum effect'
+                : 'Drag to move • Swipe for momentum • Auto-centers'}
             </Text>
           </Animated.View>
         </View>
@@ -895,17 +922,19 @@ export default function AddContactModal({ visible, onClose, onAdd, onSelectConta
           <View style={styles.businessCardEditContent}>
             {editingBusinessCard ? (
               <View style={styles.imageContainer}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.imagePreview}
                   onPress={() => {
                     setViewingBusinessCard(editingBusinessCard);
-                    setViewingContactName(contacts.find(c => c.id === editingContactId)?.name || '');
+                    setViewingContactName(
+                      contacts.find(c => c.id === editingContactId)?.name || ''
+                    );
                     setShowImageViewer(true);
                   }}
                   activeOpacity={0.9}
                 >
-                  <Image 
-                    source={{ uri: editingBusinessCard }} 
+                  <Image
+                    source={{ uri: editingBusinessCard }}
                     style={styles.businessCardImage}
                     resizeMode="cover"
                   />
@@ -914,7 +943,7 @@ export default function AddContactModal({ visible, onClose, onAdd, onSelectConta
                     <Text style={styles.imageOverlayText}>Tap to view</Text>
                   </View>
                 </TouchableOpacity>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.removeImageButton}
                   onPress={() => setEditingBusinessCard(null)}
                 >
@@ -923,17 +952,11 @@ export default function AddContactModal({ visible, onClose, onAdd, onSelectConta
               </View>
             ) : (
               <View style={styles.imageButtonsContainer}>
-                <TouchableOpacity 
-                  style={styles.imageButton}
-                  onPress={takePhotoForContact}
-                >
+                <TouchableOpacity style={styles.imageButton} onPress={takePhotoForContact}>
                   <Camera size={24} color="#007AFF" />
                   <Text style={styles.imageButtonText}>Take Photo</Text>
                 </TouchableOpacity>
-                <TouchableOpacity 
-                  style={styles.imageButton}
-                  onPress={pickImageForContact}
-                >
+                <TouchableOpacity style={styles.imageButton} onPress={pickImageForContact}>
                   <ImageIcon size={24} color="#007AFF" />
                   <Text style={styles.imageButtonText}>Choose Photo</Text>
                 </TouchableOpacity>
@@ -948,12 +971,12 @@ export default function AddContactModal({ visible, onClose, onAdd, onSelectConta
         visible={showCardEditor}
         imageUri={cardEditorImage}
         contactName={cardEditorContactName}
-        onSave={(croppedUri) => {
+        onSave={croppedUri => {
           if (editingContactId) {
             // Updating existing contact's business card
             updateContact({
               id: editingContactId,
-              updates: { businessCardImage: croppedUri }
+              updates: { businessCardImage: croppedUri },
             });
             setEditingBusinessCard(croppedUri);
           } else {

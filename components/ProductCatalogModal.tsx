@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -38,7 +38,7 @@ export default function ProductCatalogModal({
   const [newProductSku, setNewProductSku] = useState<string>('');
 
   // Initialize state from editingCatalog when it changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (editingCatalog) {
       setCatalogName(editingCatalog.name || '');
       setProducts(editingCatalog.products || []);
@@ -80,9 +80,9 @@ export default function ProductCatalogModal({
     try {
       // Read file as text (simplified approach)
       const reader = new FileReader();
-      reader.onload = async (e) => {
+      reader.onload = async e => {
         const text = e.target?.result as string;
-        
+
         // Send to AI API to extract products
         const aiResponse = await fetch('https://toolkit.rork.com/text/llm/', {
           method: 'POST',
@@ -96,23 +96,23 @@ export default function ProductCatalogModal({
                 content: `You are a product catalog parser. Extract product information from the provided text and return it as a JSON array.
                 Each product should have: name (string), price (number), description (optional string), sku (optional string).
                 Return ONLY valid JSON array, no other text. Example:
-                [{"name": "Product 1", "price": 29.99, "description": "Description here", "sku": "SKU123"}]`
+                [{"name": "Product 1", "price": 29.99, "description": "Description here", "sku": "SKU123"}]`,
               },
               {
                 role: 'user',
-                content: `Parse this product catalog and extract all products with their prices. If you can't find clear products, return an empty array. File name: ${file.name}\n\nContent (may contain binary data, extract what you can):\n${text.substring(0, 5000)}`
-              }
-            ]
+                content: `Parse this product catalog and extract all products with their prices. If you can't find clear products, return an empty array. File name: ${file.name}\n\nContent (may contain binary data, extract what you can):\n${text.substring(0, 5000)}`,
+              },
+            ],
           }),
         });
 
         const aiData = await aiResponse.json();
-        
+
         // Parse the AI response to extract products
         try {
           let extractedProducts: any[] = [];
           const completion = aiData.completion || '';
-          
+
           // Try to find JSON array in the response
           const jsonMatch = completion.match(/\[[\s\S]*\]/);
           if (jsonMatch) {
@@ -148,7 +148,7 @@ export default function ProductCatalogModal({
             [{ text: 'OK' }]
           );
         }
-        
+
         setIsProcessing(false);
       };
 
@@ -246,11 +246,7 @@ export default function ProductCatalogModal({
   };
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-    >
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>
@@ -289,8 +285,8 @@ export default function ProductCatalogModal({
               )}
             </TouchableOpacity>
             <Text style={styles.helpText}>
-              {Platform.OS === 'web' 
-                ? 'Upload a PDF with your product list. We\'ll try to extract products and prices automatically.'
+              {Platform.OS === 'web'
+                ? "Upload a PDF with your product list. We'll try to extract products and prices automatically."
                 : 'PDF upload is available on web. Please add products manually on mobile.'}
             </Text>
           </View>
@@ -332,28 +328,20 @@ export default function ProductCatalogModal({
 
           {products.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>
-                Products ({products.length})
-              </Text>
+              <Text style={styles.sectionTitle}>Products ({products.length})</Text>
               <View style={styles.productList}>
-                {products.map((product) => (
+                {products.map(product => (
                   <View key={product.id} style={styles.productCard}>
                     <View style={styles.productInfo}>
                       <View style={styles.productHeader}>
                         <Package size={16} color="#666" />
                         <Text style={styles.productName}>{product.name}</Text>
                       </View>
-                      {product.sku && (
-                        <Text style={styles.productSku}>SKU: {product.sku}</Text>
-                      )}
+                      {product.sku && <Text style={styles.productSku}>SKU: {product.sku}</Text>}
                       {product.description && (
-                        <Text style={styles.productDescription}>
-                          {product.description}
-                        </Text>
+                        <Text style={styles.productDescription}>{product.description}</Text>
                       )}
-                      <Text style={styles.productPrice}>
-                        ${product.price.toFixed(2)}
-                      </Text>
+                      <Text style={styles.productPrice}>${product.price.toFixed(2)}</Text>
                     </View>
                     <TouchableOpacity
                       style={styles.removeButton}
@@ -382,7 +370,10 @@ export default function ProductCatalogModal({
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
-              style={[styles.saveButton, (!catalogName.trim() || products.length === 0) && styles.disabledButton]}
+              style={[
+                styles.saveButton,
+                (!catalogName.trim() || products.length === 0) && styles.disabledButton,
+              ]}
               onPress={saveCatalog}
               disabled={!catalogName.trim() || products.length === 0}
             >

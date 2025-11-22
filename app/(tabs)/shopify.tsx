@@ -1,7 +1,27 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Platform, Linking } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  Alert,
+  Platform,
+  Linking,
+} from 'react-native';
 import { Stack } from 'expo-router';
-import { Globe, ExternalLink, Settings, ShoppingCart, BarChart3, Users, Package, Save, X } from 'lucide-react-native';
+import {
+  Globe,
+  ExternalLink,
+  Settings,
+  ShoppingCart,
+  BarChart3,
+  Users,
+  Package,
+  Save,
+  X,
+} from 'lucide-react-native';
 
 interface WebsiteConfig {
   url: string;
@@ -13,7 +33,7 @@ export default function ShopifyScreen() {
   const [websiteConfig, setWebsiteConfig] = useState<WebsiteConfig>({
     url: 'https://shopify.com',
     title: 'My Store',
-    type: 'shopify'
+    type: 'shopify',
   });
   const [showSettings, setShowSettings] = useState(false);
   const [tempUrl, setTempUrl] = useState(websiteConfig.url);
@@ -34,7 +54,7 @@ export default function ShopifyScreen() {
     setWebsiteConfig({
       ...websiteConfig,
       url: formattedUrl,
-      title: tempTitle.trim() || 'My Website'
+      title: tempTitle.trim() || 'My Website',
     });
     setWebViewKey(prev => prev + 1); // Force WebView reload
     setShowSettings(false);
@@ -49,33 +69,33 @@ export default function ShopifyScreen() {
       title: 'Shopify Admin',
       url: 'https://admin.shopify.com',
       icon: <ShoppingCart size={20} color="#96BF47" />,
-      description: 'Access your Shopify store admin'
+      description: 'Access your Shopify store admin',
     },
     {
       title: 'Shopify Analytics',
       url: 'https://admin.shopify.com/analytics',
       icon: <BarChart3 size={20} color="#96BF47" />,
-      description: 'View store analytics and reports'
+      description: 'View store analytics and reports',
     },
     {
       title: 'Customer Management',
       url: 'https://admin.shopify.com/customers',
       icon: <Users size={20} color="#96BF47" />,
-      description: 'Manage your customers'
+      description: 'Manage your customers',
     },
     {
       title: 'Orders',
       url: 'https://admin.shopify.com/orders',
       icon: <Package size={20} color="#96BF47" />,
-      description: 'View and manage orders'
-    }
+      description: 'View and manage orders',
+    },
   ];
 
   const handleQuickLink = (url: string, title: string) => {
     setWebsiteConfig({
       ...websiteConfig,
       url,
-      title
+      title,
     });
     setTempUrl(url);
     setTempTitle(title);
@@ -85,22 +105,24 @@ export default function ShopifyScreen() {
   if (showSettings) {
     return (
       <View style={styles.container}>
-        <Stack.Screen options={{ 
-          title: 'Website Settings',
-          headerRight: () => (
-            <TouchableOpacity onPress={() => setShowSettings(false)}>
-              <X size={24} color="#007AFF" />
-            </TouchableOpacity>
-          )
-        }} />
-        
+        <Stack.Screen
+          options={{
+            title: 'Website Settings',
+            headerRight: () => (
+              <TouchableOpacity onPress={() => setShowSettings(false)}>
+                <X size={24} color="#007AFF" />
+              </TouchableOpacity>
+            ),
+          }}
+        />
+
         <ScrollView style={styles.settingsContainer} contentContainerStyle={styles.settingsContent}>
           <View style={styles.settingsSection}>
             <Text style={styles.settingsTitle}>Website Configuration</Text>
             <Text style={styles.settingsDescription}>
               Configure your website or Shopify store URL to display in the integrated browser.
             </Text>
-            
+
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Website Title</Text>
               <TextInput
@@ -111,7 +133,7 @@ export default function ShopifyScreen() {
                 placeholderTextColor="#999"
               />
             </View>
-            
+
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Website URL</Text>
               <TextInput
@@ -125,19 +147,19 @@ export default function ShopifyScreen() {
                 keyboardType="url"
               />
             </View>
-            
+
             <TouchableOpacity style={styles.saveButton} onPress={handleSaveSettings}>
               <Save size={20} color="#fff" />
               <Text style={styles.saveButtonText}>Save Configuration</Text>
             </TouchableOpacity>
           </View>
-          
+
           <View style={styles.settingsSection}>
             <Text style={styles.settingsTitle}>Quick Links</Text>
             <Text style={styles.settingsDescription}>
               Quickly access common Shopify admin pages or set up your own custom links.
             </Text>
-            
+
             <View style={styles.quickLinksGrid}>
               {quickLinks.map((link, index) => (
                 <TouchableOpacity
@@ -145,16 +167,14 @@ export default function ShopifyScreen() {
                   style={styles.quickLinkCard}
                   onPress={() => handleQuickLink(link.url, link.title)}
                 >
-                  <View style={styles.quickLinkIcon}>
-                    {link.icon}
-                  </View>
+                  <View style={styles.quickLinkIcon}>{link.icon}</View>
                   <Text style={styles.quickLinkTitle}>{link.title}</Text>
                   <Text style={styles.quickLinkDescription}>{link.description}</Text>
                 </TouchableOpacity>
               ))}
             </View>
           </View>
-          
+
           <View style={styles.settingsSection}>
             <Text style={styles.settingsTitle}>Premium Feature</Text>
             <View style={styles.premiumInfo}>
@@ -163,7 +183,9 @@ export default function ShopifyScreen() {
                 <Text style={styles.premiumTitle}>Integrated Website Browser</Text>
               </View>
               <Text style={styles.premiumDescription}>
-                Access your Shopify store, website, or any web-based business tools directly within the app. Perfect for managing your online business while staying connected with your contacts and call notes.
+                Access your Shopify store, website, or any web-based business tools directly within
+                the app. Perfect for managing your online business while staying connected with your
+                contacts and call notes.
               </Text>
               <View style={styles.premiumFeatures}>
                 <Text style={styles.premiumFeature}>• Full web browser functionality</Text>
@@ -181,26 +203,22 @@ export default function ShopifyScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ 
-        title: websiteConfig.title,
-        headerRight: () => (
-          <View style={styles.headerButtons}>
-            <TouchableOpacity 
-              style={styles.headerButton}
-              onPress={handleOpenInBrowser}
-            >
-              <ExternalLink size={20} color="#007AFF" />
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.headerButton}
-              onPress={() => setShowSettings(true)}
-            >
-              <Settings size={20} color="#007AFF" />
-            </TouchableOpacity>
-          </View>
-        )
-      }} />
-      
+      <Stack.Screen
+        options={{
+          title: websiteConfig.title,
+          headerRight: () => (
+            <View style={styles.headerButtons}>
+              <TouchableOpacity style={styles.headerButton} onPress={handleOpenInBrowser}>
+                <ExternalLink size={20} color="#007AFF" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.headerButton} onPress={() => setShowSettings(true)}>
+                <Settings size={20} color="#007AFF" />
+              </TouchableOpacity>
+            </View>
+          ),
+        }}
+      />
+
       {Platform.OS === 'web' ? (
         <View style={styles.iframeContainer}>
           <iframe
@@ -219,13 +237,14 @@ export default function ShopifyScreen() {
           <Globe size={48} color="#007AFF" />
           <Text style={styles.webFallbackTitle}>Website Integration</Text>
           <Text style={styles.webFallbackDescription}>
-            WebView is not available in Expo Go. Please use a development build or open the website in your browser.
+            WebView is not available in Expo Go. Please use a development build or open the website
+            in your browser.
           </Text>
           <TouchableOpacity style={styles.openBrowserButton} onPress={handleOpenInBrowser}>
             <ExternalLink size={20} color="#fff" />
             <Text style={styles.openBrowserButtonText}>Open in Browser</Text>
           </TouchableOpacity>
-          
+
           <View style={styles.quickLinksSection}>
             <Text style={styles.quickLinksTitle}>Quick Access</Text>
             <View style={styles.quickLinksGrid}>
@@ -235,9 +254,7 @@ export default function ShopifyScreen() {
                   style={styles.quickLinkCard}
                   onPress={() => Linking.openURL(link.url)}
                 >
-                  <View style={styles.quickLinkIcon}>
-                    {link.icon}
-                  </View>
+                  <View style={styles.quickLinkIcon}>{link.icon}</View>
                   <Text style={styles.quickLinkTitle}>{link.title}</Text>
                 </TouchableOpacity>
               ))}

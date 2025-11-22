@@ -1,15 +1,48 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Modal, SafeAreaView, Animated, AppState, SectionList } from 'react-native';
+import React, { useState, useMemo, useRef, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Alert,
+  TextInput,
+  Modal,
+  Animated,
+  Pressable,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Button from '@/components/Button';
 import { Stack } from 'expo-router';
-import { Bell, CheckCircle, Circle, Calendar, User, AlertCircle, Plus, X, Edit3, Trash2, Archive, Cloud, Search, Clock, Filter, Phone, Package, ChevronDown, ChevronUp } from 'lucide-react-native';
+import {
+  Bell,
+  CheckCircle,
+  Circle,
+  Calendar,
+  User,
+  AlertCircle,
+  Plus,
+  X,
+  Trash2,
+  Archive,
+  Search,
+  Clock,
+  Filter,
+  Phone,
+  Package,
+  ChevronDown,
+} from 'lucide-react-native';
 import { useContacts } from '@/hooks/contacts-store';
-import { Contact, Reminder, Order } from '@/types/contact';
+import { Reminder } from '@/types/contact';
 import GroupedView, { GroupByOption } from '@/components/GroupedView';
+import ModalHeader from '@/components/ModalHeader';
+import SectionHeader from '@/components/SectionHeader';
+import { COLORS, SPACING, SHADOW, BORDER_RADIUS } from '@/constants/theme';
+import { parseTimeFromDescription } from '@/utils/timeParser';
 
 export default function RemindersScreen() {
-  const { reminders, contacts, orders, addReminder, updateReminder, deleteReminder, updateOrder } = useContacts();
+  const { reminders, contacts, orders, addReminder, updateReminder, deleteReminder, updateOrder } =
+    useContacts();
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
-  const [editingReminder, setEditingReminder] = useState<string | null>(null);
   const [newReminderTitle, setNewReminderTitle] = useState<string>('');
   const [newReminderDescription, setNewReminderDescription] = useState<string>('');
   const [selectedContactId, setSelectedContactId] = useState<string>('');
@@ -22,53 +55,19 @@ export default function RemindersScreen() {
   const [showCallReminders, setShowCallReminders] = useState<boolean>(true);
   const [showOrderReminders, setShowOrderReminders] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<'all' | 'calls' | 'orders'>('all');
-  const [expandedSections, setExpandedSections] = useState<{ [key: string]: boolean }>({ calls: true, orders: true });
-  const fadeAnim = new Animated.Value(0);
-
-  // Parse time from description
-  const parseTimeFromDescription = (description: string): Date | null => {
-    if (!description) return null;
-    
-    // Match various time formats
-    const timePatterns = [
-      /\b(\d{1,2})\s*[:.]\s*(\d{2})\s*(am|pm)?\b/i, // 12:30, 12.30, 12:30pm
-      /\b(\d{1,2})\s*(am|pm)\b/i, // 3pm, 10am
-      /\bat\s+(\d{1,2})\s*[:.]?\s*(\d{0,2})\s*(am|pm)?\b/i, // at 3, at 3:30pm
-    ];
-    
-    for (const pattern of timePatterns) {
-      const match = description.match(pattern);
-      if (match) {
-        let hours = parseInt(match[1]);
-        let minutes = match[2] ? parseInt(match[2]) : 0;
-        const meridiem = match[3] || match[match.length - 1];
-        
-        if (meridiem) {
-          const isPM = meridiem.toLowerCase() === 'pm';
-          if (isPM && hours < 12) hours += 12;
-          if (!isPM && hours === 12) hours = 0;
-        }
-        
-        const date = new Date(selectedDate);
-        date.setHours(hours, minutes, 0, 0);
-        return date;
-      }
-    }
-    
-    return null;
-  };
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
   const handleAddReminder = () => {
     console.log('handleAddReminder called');
     console.log('Title:', newReminderTitle);
     console.log('Selected Contact ID:', selectedContactId);
     console.log('Contacts available:', contacts.length);
-    
+
     if (!newReminderTitle.trim()) {
       Alert.alert('Error', 'Please enter a reminder title');
       return;
     }
-    
+
     if (!selectedContactId) {
       Alert.alert('Error', 'Please select a contact');
       return;
@@ -76,16 +75,16 @@ export default function RemindersScreen() {
 
     const contact = contacts.find(c => c.id === selectedContactId);
     console.log('Found contact:', contact);
-    
+
     if (!contact) {
       Alert.alert('Error', 'Selected contact not found');
       return;
     }
 
     // Check if description contains time and update selectedDate
-    const parsedTime = parseTimeFromDescription(newReminderDescription);
+    const parsedTime = parseTimeFromDescription(newReminderDescription, selectedDate);
     const finalDate = parsedTime || selectedDate;
-    
+
     console.log('Creating reminder with data:', {
       contactId: contact.id,
       contactName: contact.name,
@@ -94,32 +93,27 @@ export default function RemindersScreen() {
       dueDate: finalDate,
       isCompleted: false,
     });
-    
-    try {
-      addReminder({
-        contactId: contact.id,
-        contactName: contact.name,
-        title: newReminderTitle.trim(),
-        description: newReminderDescription.trim(),
-        dueDate: finalDate,
-        isCompleted: false,
-      });
-      
-      console.log('Reminder added successfully');
-      
-      // Reset form
-      setNewReminderTitle('');
-      setNewReminderDescription('');
-      setSelectedContactId('');
-      setSelectedDate(new Date());
-      setContactSearch('');
-      setShowAddModal(false);
-      
-      Alert.alert('Success', 'Reminder created successfully!');
-    } catch (error) {
-      console.error('Error adding reminder:', error);
-      Alert.alert('Error', 'Failed to create reminder. Please try again.');
-    }
+
+    addReminder({
+      contactId: contact.id,
+      contactName: contact.name,
+      title: newReminderTitle.trim(),
+      description: newReminderDescription.trim(),
+      dueDate: finalDate,
+      isCompleted: false,
+    });
+
+    console.log('Reminder added successfully');
+
+    // Reset form
+    setNewReminderTitle('');
+    setNewReminderDescription('');
+    setSelectedContactId('');
+    setSelectedDate(new Date());
+    setContactSearch('');
+    setShowAddModal(false);
+
+    Alert.alert('Success', 'Reminder created successfully!');
   };
 
   const handleReminderToggle = (reminder: any) => {
@@ -133,15 +127,15 @@ export default function RemindersScreen() {
         // Handle order reminder completion
         const order = orders.find(o => o.id === reminder.orderId);
         if (order) {
-          updateOrder({ 
-            id: order.id, 
-            updates: { reminderSent: false } 
+          updateOrder({
+            id: order.id,
+            updates: { reminderSent: false },
           });
         }
       } else {
-        updateReminder({ 
-          id: reminder.id, 
-          updates: { isCompleted: false } 
+        updateReminder({
+          id: reminder.id,
+          updates: { isCompleted: false },
         });
       }
     }
@@ -153,21 +147,21 @@ export default function RemindersScreen() {
         // Handle order reminder archiving
         const order = orders.find(o => o.id === (completedReminder as any).orderId);
         if (order) {
-          updateOrder({ 
-            id: order.id, 
-            updates: { 
+          updateOrder({
+            id: order.id,
+            updates: {
               reminderSent: true,
-              status: 'delivered' 
-            } 
+              status: 'delivered',
+            },
           });
         }
       } else {
-        updateReminder({ 
-          id: completedReminder.id, 
-          updates: { 
+        updateReminder({
+          id: completedReminder.id,
+          updates: {
             isCompleted: true,
-            isArchived: true 
-          } 
+            isArchived: true,
+          },
         });
       }
       setShowCompletionModal(false);
@@ -181,12 +175,12 @@ export default function RemindersScreen() {
         // Handle order reminder deletion
         const order = orders.find(o => o.id === (completedReminder as any).orderId);
         if (order) {
-          updateOrder({ 
-            id: order.id, 
-            updates: { 
+          updateOrder({
+            id: order.id,
+            updates: {
               reminderDate: undefined,
-              reminderSent: false 
-            } 
+              reminderSent: false,
+            },
           });
         }
       } else {
@@ -203,15 +197,15 @@ export default function RemindersScreen() {
         // Handle order reminder keeping
         const order = orders.find(o => o.id === (completedReminder as any).orderId);
         if (order) {
-          updateOrder({ 
-            id: order.id, 
-            updates: { reminderSent: true } 
+          updateOrder({
+            id: order.id,
+            updates: { reminderSent: true },
           });
         }
       } else {
-        updateReminder({ 
-          id: completedReminder.id, 
-          updates: { isCompleted: true } 
+        updateReminder({
+          id: completedReminder.id,
+          updates: { isCompleted: true },
         });
       }
       setShowCompletionModal(false);
@@ -223,15 +217,22 @@ export default function RemindersScreen() {
   const filteredContacts = useMemo(() => {
     if (!contactSearch.trim()) return contacts;
     const query = contactSearch.toLowerCase();
-    return contacts.filter(contact => 
-      contact.name.toLowerCase().includes(query) ||
-      contact.phoneNumber.toLowerCase().includes(query)
+    return contacts.filter(
+      contact =>
+        contact.name.toLowerCase().includes(query) ||
+        contact.phoneNumber.toLowerCase().includes(query)
     );
   }, [contacts, contactSearch]);
 
-  const ContactPicker = ({ selectedId, onSelect }: { selectedId: string; onSelect: (id: string) => void }) => {
+  const ContactPicker = ({
+    selectedId,
+    onSelect,
+  }: {
+    selectedId: string;
+    onSelect: (id: string) => void;
+  }) => {
     const selectedContact = contacts.find(c => c.id === selectedId);
-    
+
     return (
       <View style={styles.contactPicker}>
         <Text style={styles.inputLabel}>Contact *</Text>
@@ -242,38 +243,38 @@ export default function RemindersScreen() {
         ) : (
           <>
             <View style={styles.contactSearchContainer}>
-              <Search size={16} color="#8E8E93" />
+              <Search size={16} color={COLORS.TEXT_QUATERNARY} />
               <TextInput
                 style={styles.contactSearchInput}
                 placeholder="Search contacts..."
-                placeholderTextColor="#8E8E93"
+                placeholderTextColor={COLORS.TEXT_QUATERNARY}
                 value={contactSearch}
                 onChangeText={setContactSearch}
               />
               {contactSearch.length > 0 && (
-                <TouchableOpacity onPress={() => setContactSearch('')}>
-                  <X size={16} color="#8E8E93" />
-                </TouchableOpacity>
+                <Pressable onPress={() => setContactSearch('')}>
+                  <X size={16} color={COLORS.TEXT_QUATERNARY} />
+                </Pressable>
               )}
             </View>
-            
+
             {selectedContact && (
               <View style={styles.selectedContactCard}>
-                <User size={16} color="#007AFF" />
+                <User size={16} color={COLORS.PRIMARY} />
                 <Text style={styles.selectedContactName}>{selectedContact.name}</Text>
-                <TouchableOpacity onPress={() => onSelect('')}>
-                  <X size={16} color="#666" />
-                </TouchableOpacity>
+                <Pressable onPress={() => onSelect('')}>
+                  <X size={16} color={COLORS.TEXT_SECONDARY} />
+                </Pressable>
               </View>
             )}
-            
+
             <ScrollView style={styles.contactScrollView} showsVerticalScrollIndicator={false}>
-              {filteredContacts.map((contact) => (
-                <TouchableOpacity
+              {filteredContacts.map(contact => (
+                <Pressable
                   key={contact.id}
                   style={[
                     styles.contactItem,
-                    selectedId === contact.id && styles.selectedContactItem
+                    selectedId === contact.id && styles.selectedContactItem,
                   ]}
                   onPress={() => {
                     onSelect(contact.id);
@@ -289,25 +290,23 @@ export default function RemindersScreen() {
                         toValue: 0,
                         duration: 200,
                         useNativeDriver: true,
-                      })
+                      }),
                     ]).start();
                   }}
                 >
                   <View style={styles.contactItemContent}>
-                    <Text style={[
-                      styles.contactItemName,
-                      selectedId === contact.id && styles.selectedContactItemName
-                    ]}>
+                    <Text
+                      style={[
+                        styles.contactItemName,
+                        selectedId === contact.id && styles.selectedContactItemName,
+                      ]}
+                    >
                       {contact.name}
                     </Text>
-                    <Text style={styles.contactItemPhone}>
-                      {contact.phoneNumber}
-                    </Text>
+                    <Text style={styles.contactItemPhone}>{contact.phoneNumber}</Text>
                   </View>
-                  {selectedId === contact.id && (
-                    <CheckCircle size={20} color="#007AFF" />
-                  )}
-                </TouchableOpacity>
+                  {selectedId === contact.id && <CheckCircle size={20} color={COLORS.PRIMARY} />}
+                </Pressable>
               ))}
             </ScrollView>
           </>
@@ -316,7 +315,13 @@ export default function RemindersScreen() {
     );
   };
 
-  const DatePicker = ({ date, onDateChange }: { date: Date; onDateChange: (date: Date) => void }) => {
+  const DatePicker = ({
+    date,
+    onDateChange,
+  }: {
+    date: Date;
+    onDateChange: (date: Date) => void;
+  }) => {
     const today = new Date();
     const tomorrow = new Date();
     tomorrow.setDate(today.getDate() + 1);
@@ -333,104 +338,56 @@ export default function RemindersScreen() {
       <View style={styles.datePicker}>
         <Text style={styles.inputLabel}>Due Date</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dateScrollView}>
-          {quickDates.map((quickDate) => {
+          {quickDates.map(quickDate => {
             const isSelected = date.toDateString() === quickDate.date.toDateString();
             return (
-              <TouchableOpacity
+              <Pressable
                 key={quickDate.label}
-                style={[
-                  styles.dateChip,
-                  isSelected && styles.selectedDateChip
-                ]}
+                style={[styles.dateChip, isSelected && styles.selectedDateChip]}
                 onPress={() => onDateChange(quickDate.date)}
               >
-                <Text style={[
-                  styles.dateChipText,
-                  isSelected && styles.selectedDateChipText
-                ]}>
+                <Text style={[styles.dateChipText, isSelected && styles.selectedDateChipText]}>
                   {quickDate.label}
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             );
           })}
         </ScrollView>
-        <Text style={styles.selectedDateText}>
-          Selected: {date.toLocaleDateString()}
-        </Text>
+        <Text style={styles.selectedDateText}>Selected: {date.toLocaleDateString()}</Text>
       </View>
     );
   };
-
-  const AddReminderModal = () => (
-    <Modal
-      visible={showAddModal}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={() => setShowAddModal(false)}
-    >
-      <View style={styles.modalContainer}>
-        <View style={styles.modalHeader}>
-          <TouchableOpacity onPress={() => setShowAddModal(false)}>
-            <X size={24} color="#666" />
-          </TouchableOpacity>
-          <Text style={styles.modalTitle}>Add Reminder</Text>
-          <TouchableOpacity onPress={handleAddReminder}>
-            <Text style={styles.saveButton}>Save</Text>
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView style={styles.modalContent}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Title *</Text>
-            <TextInput
-              style={styles.textInput}
-              value={newReminderTitle}
-              onChangeText={setNewReminderTitle}
-              placeholder="Enter reminder title"
-              multiline={false}
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Description</Text>
-            <TextInput
-              style={[styles.textInput, styles.textArea]}
-              value={newReminderDescription}
-              onChangeText={(text) => {
-                setNewReminderDescription(text);
-                // Auto-detect time in description
-                const detectedTime = parseTimeFromDescription(text);
-                if (detectedTime) {
-                  setSelectedDate(detectedTime);
-                }
-              }}
-              placeholder="Enter description (e.g., 'Call at 3pm' or 'Meeting at 14:30')"
-              multiline={true}
-              numberOfLines={3}
-            />
-            {parseTimeFromDescription(newReminderDescription) && (
-              <View style={styles.timeDetected}>
-                <Clock size={14} color="#007AFF" />
-                <Text style={styles.timeDetectedText}>
-                  Time detected: {parseTimeFromDescription(newReminderDescription)?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </Text>
-              </View>
-            )}
-          </View>
-
-          <ContactPicker selectedId={selectedContactId} onSelect={setSelectedContactId} />
-          <DatePicker date={selectedDate} onDateChange={setSelectedDate} />
-        </ScrollView>
-      </View>
-    </Modal>
-  );
 
   const CompletionModal = () => {
     const isOrderReminder = completedReminder && (completedReminder as any).isOrder;
     const modalTitle = isOrderReminder ? 'Order Reminder Completed!' : 'Call Reminder Completed!';
     const modalIcon = isOrderReminder ? Package : Phone;
     const IconComponent = modalIcon;
-    
+
+    const completionActions = [
+      {
+        icon: isOrderReminder ? Package : Archive,
+        label: isOrderReminder ? 'Mark Delivered' : 'Archive',
+        subtext: isOrderReminder ? 'Order completed' : 'Save to archive',
+        style: isOrderReminder ? styles.deliveredButton : styles.archiveButton,
+        onPress: handleArchiveReminder,
+      },
+      {
+        icon: Trash2,
+        label: 'Delete',
+        subtext: 'Remove reminder',
+        style: styles.deleteButton,
+        onPress: handleDeleteCompletedReminder,
+      },
+      {
+        icon: CheckCircle,
+        label: 'Keep',
+        subtext: 'Mark as completed',
+        style: styles.keepButton,
+        onPress: handleKeepReminder,
+      },
+    ];
+
     return (
       <Modal
         visible={showCompletionModal}
@@ -439,10 +396,20 @@ export default function RemindersScreen() {
         onRequestClose={() => setShowCompletionModal(false)}
       >
         <View style={styles.completionModalOverlay}>
-          <View style={[styles.completionModalContainer, isOrderReminder && styles.orderCompletionModal]}>
+          <View
+            style={[
+              styles.completionModalContainer,
+              isOrderReminder && styles.orderCompletionModal,
+            ]}
+          >
             <View style={styles.completionModalHeader}>
-              <View style={[styles.completionIconWrapper, isOrderReminder && styles.orderCompletionIcon]}>
-                <IconComponent size={24} color="#fff" />
+              <View
+                style={[
+                  styles.completionIconWrapper,
+                  isOrderReminder && styles.orderCompletionIcon,
+                ]}
+              >
+                <IconComponent size={24} color={COLORS.WHITE} />
               </View>
               <Text style={styles.completionModalTitle}>{modalTitle}</Text>
               <Text style={styles.completionModalSubtitle}>
@@ -454,46 +421,29 @@ export default function RemindersScreen() {
               {completedReminder && (
                 <View style={styles.completedReminderInfo}>
                   <Text style={styles.completedReminderTitle}>{completedReminder.title}</Text>
-                  <Text style={styles.completedReminderContact}>{completedReminder.contactName}</Text>
+                  <Text style={styles.completedReminderContact}>
+                    {completedReminder.contactName}
+                  </Text>
                   {isOrderReminder && (completedReminder as any).items && (
                     <Text style={styles.orderItemsCount}>
-                      {(completedReminder as any).items.length} items • ${(completedReminder as any).totalAmount?.toFixed(2)}
+                      {(completedReminder as any).items.length} items • $
+                      {(completedReminder as any).totalAmount?.toFixed(2)}
                     </Text>
                   )}
                 </View>
               )}
 
               <View style={styles.completionActions}>
-                <TouchableOpacity 
-                  style={[styles.completionActionButton, isOrderReminder ? styles.deliveredButton : styles.archiveButton]}
-                  onPress={handleArchiveReminder}
-                >
-                  {isOrderReminder ? <Package size={20} color="#fff" /> : <Archive size={20} color="#fff" />}
-                  <Text style={styles.completionActionText}>
-                    {isOrderReminder ? 'Mark Delivered' : 'Archive'}
-                  </Text>
-                  <Text style={styles.completionActionSubtext}>
-                    {isOrderReminder ? 'Order completed' : 'Save to archive'}
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity 
-                  style={[styles.completionActionButton, styles.deleteButton]}
-                  onPress={handleDeleteCompletedReminder}
-                >
-                  <Trash2 size={20} color="#fff" />
-                  <Text style={styles.completionActionText}>Delete</Text>
-                  <Text style={styles.completionActionSubtext}>Remove reminder</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity 
-                  style={[styles.completionActionButton, styles.keepButton]}
-                  onPress={handleKeepReminder}
-                >
-                  <CheckCircle size={20} color="#fff" />
-                  <Text style={styles.completionActionText}>Keep</Text>
-                  <Text style={styles.completionActionSubtext}>Mark as completed</Text>
-                </TouchableOpacity>
+                {completionActions.map((action) => (
+                  <CompletionActionButton
+                    key={action.label}
+                    icon={action.icon}
+                    label={action.label}
+                    subtext={action.subtext}
+                    style={action.style}
+                    onPress={action.onPress}
+                  />
+                ))}
               </View>
             </View>
           </View>
@@ -502,14 +452,69 @@ export default function RemindersScreen() {
     );
   };
 
+  // Helper component for stat cards
+  const StatCard = ({ icon: Icon, count, label, color = COLORS.TEXT_PRIMARY }: {
+    icon: any;
+    count: number;
+    label: string;
+    color?: string;
+  }) => (
+    <View style={styles.statCard}>
+      <View style={[styles.iconContainer, { backgroundColor: color + '15' }]}>
+        <Icon size={20} color={color} />
+      </View>
+      <View style={styles.statContent}>
+        <Text style={[styles.statNumber, { color }]}>{count}</Text>
+        <Text style={styles.statLabel}>{label}</Text>
+      </View>
+    </View>
+  );
+
+  // Helper component for tab buttons
+  const TabButton = ({ tab, icon: Icon, label, count, onPress }: {
+    tab: 'all' | 'calls' | 'orders';
+    icon?: any;
+    label: string;
+    count: number;
+    onPress: () => void;
+  }) => {
+    const isActive = activeTab === tab;
+    return (
+      <Pressable style={[styles.tab, isActive && styles.activeTab]} onPress={onPress}>
+        {Icon && <Icon size={16} color={isActive ? COLORS.PRIMARY : COLORS.TEXT_SECONDARY} />}
+        <Text style={[styles.tabText, isActive && styles.activeTabText]}>{label}</Text>
+        <View style={[styles.tabBadge, isActive && styles.activeTabBadge]}>
+          <Text style={[styles.tabBadgeText, isActive && styles.activeTabBadgeText]}>
+            {count}
+          </Text>
+        </View>
+      </Pressable>
+    );
+  };
+
+  // Helper component for completion action buttons
+  const CompletionActionButton = ({ icon: Icon, label, subtext, style, onPress }: {
+    icon: any;
+    label: string;
+    subtext: string;
+    style: any;
+    onPress: () => void;
+  }) => (
+    <Pressable style={[styles.completionActionButton, style]} onPress={onPress}>
+      <Icon size={20} color={COLORS.WHITE} />
+      <Text style={styles.completionActionText}>{label}</Text>
+      <Text style={styles.completionActionSubtext}>{subtext}</Text>
+    </Pressable>
+  );
+
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
-      <Bell size={64} color="#ccc" />
+      <Bell size={64} color={COLORS.ICON_GRAY} />
       <Text style={styles.emptyTitle}>No Reminders Yet</Text>
       <Text style={styles.emptyText}>
         Create reminders to follow up with your contacts after calls
       </Text>
-      <TouchableOpacity 
+      <Pressable
         style={styles.emptyActionButton}
         onPress={() => {
           if (contacts.length === 0) {
@@ -519,9 +524,9 @@ export default function RemindersScreen() {
           setShowAddModal(true);
         }}
       >
-        <Plus size={20} color="#fff" />
+        <Plus size={20} color={COLORS.WHITE} />
         <Text style={styles.emptyActionButtonText}>Create First Reminder</Text>
-      </TouchableOpacity>
+      </Pressable>
     </View>
   );
 
@@ -533,7 +538,7 @@ export default function RemindersScreen() {
 
   const orderReminders = useMemo(() => {
     if (!showOrderReminders) return [];
-    
+
     return orders
       .filter(order => order.reminderDate && !order.reminderSent)
       .map(order => ({
@@ -541,7 +546,8 @@ export default function RemindersScreen() {
         contactId: order.contactId,
         contactName: order.contactName,
         title: `Order #${order.id.slice(-6)}`,
-        description: order.notes || `${order.items.length} items - Total: ${order.totalAmount.toFixed(2)}`,
+        description:
+          order.notes || `${order.items.length} items - Total: ${order.totalAmount.toFixed(2)}`,
         dueDate: new Date(order.reminderDate!),
         isCompleted: order.status === 'delivered',
         isArchived: false,
@@ -574,28 +580,33 @@ export default function RemindersScreen() {
   const pendingReminders = allReminders.filter(r => !r.isCompleted);
   const completedReminders = allReminders.filter(r => r.isCompleted);
   const overdueReminders = pendingReminders.filter(r => new Date(r.dueDate) < new Date());
-  const todayReminders = pendingReminders.filter(r => new Date(r.dueDate).toDateString() === new Date().toDateString());
+  const todayReminders = pendingReminders.filter(
+    r => new Date(r.dueDate).toDateString() === new Date().toDateString()
+  );
+
+  const tabs = [
+    { tab: 'all' as const, label: 'All', count: callReminders.length + orderReminders.length },
+    { tab: 'calls' as const, icon: Phone, label: 'Calls', count: callReminders.length },
+    { tab: 'orders' as const, icon: Package, label: 'Orders', count: orderReminders.length },
+  ];
 
   // Stats for each type
   const callStats = {
     pending: callReminders.filter(r => !r.isCompleted).length,
     completed: callReminders.filter(r => r.isCompleted).length,
     overdue: callReminders.filter(r => !r.isCompleted && new Date(r.dueDate) < new Date()).length,
-    today: callReminders.filter(r => !r.isCompleted && new Date(r.dueDate).toDateString() === new Date().toDateString()).length,
+    today: callReminders.filter(
+      r => !r.isCompleted && new Date(r.dueDate).toDateString() === new Date().toDateString()
+    ).length,
   };
 
   const orderStats = {
     pending: orderReminders.filter(r => !r.isCompleted).length,
     completed: orderReminders.filter(r => r.isCompleted).length,
     overdue: orderReminders.filter(r => !r.isCompleted && new Date(r.dueDate) < new Date()).length,
-    today: orderReminders.filter(r => !r.isCompleted && new Date(r.dueDate).toDateString() === new Date().toDateString()).length,
-  };
-
-  const toggleSection = (section: string) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
+    today: orderReminders.filter(
+      r => !r.isCompleted && new Date(r.dueDate).toDateString() === new Date().toDateString()
+    ).length,
   };
 
   const renderReminderCard = (reminder: any) => {
@@ -603,39 +614,52 @@ export default function RemindersScreen() {
     const isToday = new Date(reminder.dueDate).toDateString() === new Date().toDateString();
     const contact = contacts.find(c => c.id === reminder.contactId);
     const isOrder = reminder.isOrder;
-    
+
+    // Helper to get circle color based on reminder state
+    const getCircleColor = () => {
+      if (isOverdue) return COLORS.DESTRUCTIVE;
+      if (isOrder) return COLORS.WARNING;
+      return COLORS.TEXT_QUATERNARY;
+    };
+
+    // Helper to get calendar icon color
+    const getCalendarColor = () => {
+      if (isOverdue) return COLORS.DESTRUCTIVE;
+      if (isToday) return COLORS.WARNING;
+      return COLORS.TEXT_QUATERNARY;
+    };
+
     return (
-      <View key={reminder.id} style={[
-        styles.reminderCard,
-        reminder.isCompleted && styles.completedReminderCard,
-        isOverdue && styles.overdueReminderCard,
-        isOrder && styles.orderReminderCard
-      ]}>
-        <TouchableOpacity 
-          style={styles.reminderCheckbox}
-          onPress={() => handleReminderToggle(reminder)}
-        >
+      <View
+        key={reminder.id}
+        style={[
+          styles.reminderCard,
+          reminder.isCompleted && styles.completedReminderCard,
+          isOverdue && styles.overdueReminderCard,
+          isOrder && styles.orderReminderCard,
+        ]}
+      >
+        <Pressable style={styles.reminderCheckbox} onPress={() => handleReminderToggle(reminder)}>
           {reminder.isCompleted ? (
-            <CheckCircle size={24} color="#34C759" />
+            <CheckCircle size={24} color={COLORS.SUCCESS} />
           ) : (
-            <Circle size={24} color={isOverdue ? "#FF3B30" : isOrder ? "#FF9500" : "#8E8E93"} />
+            <Circle size={24} color={getCircleColor()} />
           )}
-        </TouchableOpacity>
-        
+        </Pressable>
+
         <View style={styles.reminderContent}>
           <View style={styles.reminderHeader}>
-            {isOrder ? <Package size={14} color="#FF9500" /> : <Phone size={14} color="#007AFF" />}
-            <Text style={[
-              styles.reminderTitle,
-              reminder.isCompleted && styles.completedReminderTitle
-            ]}>
+            {isOrder ? <Package size={14} color={COLORS.WARNING} /> : <Phone size={14} color={COLORS.PRIMARY} />}
+            <Text
+              style={[styles.reminderTitle, reminder.isCompleted && styles.completedReminderTitle]}
+            >
               {reminder.title}
             </Text>
           </View>
-          
+
           <View style={styles.reminderMeta}>
             <View style={styles.reminderMetaItem}>
-              <User size={14} color="#8E8E93" />
+              <User size={14} color={COLORS.TEXT_QUATERNARY} />
               <Text style={styles.reminderMetaText}>
                 {contact ? contact.name : reminder.contactName}
                 {contact && contact.phoneNumber && (
@@ -643,40 +667,47 @@ export default function RemindersScreen() {
                 )}
               </Text>
             </View>
-            
+
             <View style={styles.reminderMetaItem}>
-              <Calendar size={14} color={isOverdue ? "#FF3B30" : isToday ? "#FF9500" : "#8E8E93"} />
-              <Text style={[
-                styles.reminderMetaText,
-                isOverdue && styles.overdueText,
-                isToday && styles.todayText
-              ]}>
+              <Calendar size={14} color={getCalendarColor()} />
+              <Text
+                style={[
+                  styles.reminderMetaText,
+                  isOverdue && styles.overdueText,
+                  isToday && styles.todayText,
+                ]}
+              >
                 {isToday ? 'Today' : new Date(reminder.dueDate).toLocaleDateString()}
                 {' • '}
-                {new Date(reminder.dueDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                {new Date(reminder.dueDate).toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
               </Text>
             </View>
-            
+
             {isOverdue && !reminder.isCompleted && (
               <View style={styles.reminderMetaItem}>
-                <AlertCircle size={14} color="#FF3B30" />
+                <AlertCircle size={14} color={COLORS.DESTRUCTIVE} />
                 <Text style={styles.overdueText}>Overdue</Text>
               </View>
             )}
           </View>
-          
+
           {reminder.description && (
-            <Text style={[
-              styles.reminderDescription,
-              reminder.isCompleted && styles.completedReminderDescription
-            ]}>
+            <Text
+              style={[
+                styles.reminderDescription,
+                reminder.isCompleted && styles.completedReminderDescription,
+              ]}
+            >
               {reminder.description}
             </Text>
           )}
         </View>
-        
+
         <View style={styles.reminderActions}>
-          <TouchableOpacity 
+          <Pressable
             style={styles.actionButton}
             onPress={() => {
               if (isOrder) {
@@ -685,22 +716,22 @@ export default function RemindersScreen() {
                   'Are you sure you want to delete this order reminder?',
                   [
                     { text: 'Cancel', style: 'cancel' },
-                    { 
-                      text: 'Delete', 
-                      style: 'destructive', 
+                    {
+                      text: 'Delete',
+                      style: 'destructive',
                       onPress: () => {
                         const order = orders.find(o => o.id === reminder.orderId);
                         if (order) {
-                          updateOrder({ 
-                            id: order.id, 
-                            updates: { 
+                          updateOrder({
+                            id: order.id,
+                            updates: {
                               reminderDate: undefined,
-                              reminderSent: false 
-                            } 
+                              reminderSent: false,
+                            },
                           });
                         }
-                      }
-                    }
+                      },
+                    },
                   ]
                 );
               } else {
@@ -709,129 +740,87 @@ export default function RemindersScreen() {
                   'Are you sure you want to delete this call reminder?',
                   [
                     { text: 'Cancel', style: 'cancel' },
-                    { text: 'Delete', style: 'destructive', onPress: () => deleteReminder(reminder.id) }
+                    {
+                      text: 'Delete',
+                      style: 'destructive',
+                      onPress: () => deleteReminder(reminder.id),
+                    },
                   ]
                 );
               }
             }}
           >
-            <Trash2 size={18} color="#FF3B30" />
-          </TouchableOpacity>
+            <Trash2 size={18} color={COLORS.DESTRUCTIVE} />
+          </Pressable>
         </View>
       </View>
     );
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <Stack.Screen options={{ title: 'Reminders' }} />
-      
+
       {callReminders.length === 0 && orderReminders.length === 0 ? (
         renderEmpty()
       ) : (
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
           {/* Stats Section */}
           <View style={styles.statsSection}>
             <Text style={styles.sectionTitle}>Summary</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.statsGrid}>
-              <View style={styles.statCard}>
-                <View style={[styles.iconContainer, { backgroundColor: '#007AFF15' }]}>
-                  <Bell size={20} color="#007AFF" />
-                </View>
-                <View style={styles.statContent}>
-                  <Text style={styles.statNumber}>{pendingReminders.length}</Text>
-                  <Text style={styles.statLabel}>Pending</Text>
-                </View>
-              </View>
-              <View style={styles.statCard}>
-                <View style={[styles.iconContainer, { backgroundColor: '#FF3B3015' }]}>
-                  <AlertCircle size={20} color="#FF3B30" />
-                </View>
-                <View style={styles.statContent}>
-                  <Text style={[styles.statNumber, { color: '#FF3B30' }]}>{overdueReminders.length}</Text>
-                  <Text style={styles.statLabel}>Overdue</Text>
-                </View>
-              </View>
-              <View style={styles.statCard}>
-                <View style={[styles.iconContainer, { backgroundColor: '#FF950015' }]}>
-                  <Clock size={20} color="#FF9500" />
-                </View>
-                <View style={styles.statContent}>
-                  <Text style={[styles.statNumber, { color: '#FF9500' }]}>{todayReminders.length}</Text>
-                  <Text style={styles.statLabel}>Today</Text>
-                </View>
-              </View>
-              <View style={styles.statCard}>
-                <View style={[styles.iconContainer, { backgroundColor: '#34C75915' }]}>
-                  <CheckCircle size={20} color="#34C759" />
-                </View>
-                <View style={styles.statContent}>
-                  <Text style={[styles.statNumber, { color: '#34C759' }]}>{completedReminders.length}</Text>
-                  <Text style={styles.statLabel}>Done</Text>
-                </View>
-              </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.statsGrid}
+            >
+              {[
+                { icon: Bell, count: pendingReminders.length, label: 'Pending', color: COLORS.PRIMARY },
+                { icon: AlertCircle, count: overdueReminders.length, label: 'Overdue', color: COLORS.DESTRUCTIVE },
+                { icon: Clock, count: todayReminders.length, label: 'Today', color: COLORS.WARNING },
+                { icon: CheckCircle, count: completedReminders.length, label: 'Done', color: COLORS.SUCCESS },
+              ].map((stat) => (
+                <StatCard
+                  key={stat.label}
+                  icon={stat.icon}
+                  count={stat.count}
+                  label={stat.label}
+                  color={stat.color}
+                />
+              ))}
             </ScrollView>
           </View>
 
           {/* Tab Selector */}
           <View style={styles.tabContainer}>
-            <TouchableOpacity 
-              style={[styles.tab, activeTab === 'all' && styles.activeTab]}
-              onPress={() => setActiveTab('all')}
-            >
-              <Text style={[styles.tabText, activeTab === 'all' && styles.activeTabText]}>All</Text>
-              <View style={[styles.tabBadge, activeTab === 'all' && styles.activeTabBadge]}>
-                <Text style={[styles.tabBadgeText, activeTab === 'all' && styles.activeTabBadgeText]}>
-                  {callReminders.length + orderReminders.length}
-                </Text>
-              </View>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.tab, activeTab === 'calls' && styles.activeTab]}
-              onPress={() => setActiveTab('calls')}
-            >
-              <Phone size={16} color={activeTab === 'calls' ? '#007AFF' : '#666'} />
-              <Text style={[styles.tabText, activeTab === 'calls' && styles.activeTabText]}>Calls</Text>
-              <View style={[styles.tabBadge, activeTab === 'calls' && styles.activeTabBadge]}>
-                <Text style={[styles.tabBadgeText, activeTab === 'calls' && styles.activeTabBadgeText]}>
-                  {callReminders.length}
-                </Text>
-              </View>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.tab, activeTab === 'orders' && styles.activeTab]}
-              onPress={() => setActiveTab('orders')}
-            >
-              <Package size={16} color={activeTab === 'orders' ? '#007AFF' : '#666'} />
-              <Text style={[styles.tabText, activeTab === 'orders' && styles.activeTabText]}>Orders</Text>
-              <View style={[styles.tabBadge, activeTab === 'orders' && styles.activeTabBadge]}>
-                <Text style={[styles.tabBadgeText, activeTab === 'orders' && styles.activeTabBadgeText]}>
-                  {orderReminders.length}
-                </Text>
-              </View>
-            </TouchableOpacity>
+            {tabs.map((tabConfig) => (
+              <TabButton
+                key={tabConfig.tab}
+                tab={tabConfig.tab}
+                icon={tabConfig.icon}
+                label={tabConfig.label}
+                count={tabConfig.count}
+                onPress={() => setActiveTab(tabConfig.tab)}
+              />
+            ))}
           </View>
 
           {/* Group By Selector */}
           <View style={styles.groupBySection}>
-            <TouchableOpacity 
-              style={styles.groupByButton}
-              onPress={() => setShowGroupByModal(true)}
-            >
-              <Filter size={16} color="#007AFF" />
-              <Text style={styles.groupByButtonText}>Group by: {groupBy.charAt(0).toUpperCase() + groupBy.slice(1)}</Text>
-              <ChevronDown size={16} color="#007AFF" />
-            </TouchableOpacity>
+            <Pressable style={styles.groupByButton} onPress={() => setShowGroupByModal(true)}>
+              <Filter size={16} color={COLORS.PRIMARY} />
+              <Text style={styles.groupByButtonText}>
+                Group by: {groupBy.charAt(0).toUpperCase() + groupBy.slice(1)}
+              </Text>
+              <ChevronDown size={16} color={COLORS.PRIMARY} />
+            </Pressable>
             {activeTab === 'calls' && (
-              <TouchableOpacity 
-                style={styles.addButton}
-                onPress={() => setShowAddModal(true)}
-              >
-                <Plus size={16} color="#fff" />
+              <Pressable style={styles.addButton} onPress={() => setShowAddModal(true)}>
+                <Plus size={16} color={COLORS.WHITE} />
                 <Text style={styles.addButtonText}>Add</Text>
-              </TouchableOpacity>
+              </Pressable>
             )}
           </View>
 
@@ -843,7 +832,7 @@ export default function RemindersScreen() {
                 <View style={styles.section}>
                   <View style={styles.sectionHeader}>
                     <View style={styles.sectionTitleContainer}>
-                      <Phone size={18} color="#007AFF" />
+                      <Phone size={18} color={COLORS.PRIMARY} />
                       <Text style={styles.sectionTitle}>Call Reminders</Text>
                       <View style={styles.sectionBadge}>
                         <Text style={styles.sectionBadgeText}>{callStats.pending}</Text>
@@ -865,10 +854,12 @@ export default function RemindersScreen() {
                 <View style={styles.section}>
                   <View style={styles.sectionHeader}>
                     <View style={styles.sectionTitleContainer}>
-                      <Package size={18} color="#FF9500" />
+                      <Package size={18} color={COLORS.WARNING} />
                       <Text style={styles.sectionTitle}>Order Reminders</Text>
-                      <View style={[styles.sectionBadge, { backgroundColor: '#FF950020' }]}>
-                        <Text style={[styles.sectionBadgeText, { color: '#FF9500' }]}>{orderStats.pending}</Text>
+                      <View style={[styles.sectionBadge, styles.orderSectionBadge]}>
+                        <Text style={[styles.sectionBadgeText, styles.orderSectionBadgeText]}>
+                          {orderStats.pending}
+                        </Text>
                       </View>
                     </View>
                   </View>
@@ -901,16 +892,81 @@ export default function RemindersScreen() {
 
           <View style={styles.infoSection}>
             <View style={styles.infoCard}>
-              <Bell size={20} color="#007AFF" />
+              <Bell size={20} color={COLORS.PRIMARY} />
               <Text style={styles.infoText}>
-                Manage reminders for both calls and orders. Never miss important follow-ups or deliveries.
+                Manage reminders for both calls and orders. Never miss important follow-ups or
+                deliveries.
               </Text>
             </View>
           </View>
         </ScrollView>
       )}
 
-      <AddReminderModal />
+      {/* Add Reminder Modal */}
+      <Modal
+        visible={showAddModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowAddModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <ModalHeader
+            title="Add Reminder"
+            onClose={() => setShowAddModal(false)}
+            onAction={handleAddReminder}
+            leftIcon={<X size={24} color={COLORS.TEXT_SECONDARY} />}
+            rightIcon={<Text style={styles.saveButton}>Save</Text>}
+          />
+
+          <ScrollView style={styles.modalContent}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Title *</Text>
+              <TextInput
+                style={styles.textInput}
+                value={newReminderTitle}
+                onChangeText={setNewReminderTitle}
+                placeholder="Enter reminder title"
+                multiline={false}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Description</Text>
+              <TextInput
+                style={[styles.textInput, styles.textArea]}
+                value={newReminderDescription}
+                onChangeText={text => {
+                  setNewReminderDescription(text);
+                  // Auto-detect time in description
+                  const detectedTime = parseTimeFromDescription(text, selectedDate);
+                  if (detectedTime) {
+                    setSelectedDate(detectedTime);
+                  }
+                }}
+                placeholder="Enter description (e.g., 'Call at 3pm' or 'Meeting at 14:30')"
+                multiline={true}
+                numberOfLines={3}
+              />
+              {parseTimeFromDescription(newReminderDescription, selectedDate) && (
+                <View style={styles.timeDetected}>
+                  <Clock size={14} color={COLORS.PRIMARY} />
+                  <Text style={styles.timeDetectedText}>
+                    Time detected:{' '}
+                    {parseTimeFromDescription(newReminderDescription, selectedDate)?.toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            <ContactPicker selectedId={selectedContactId} onSelect={setSelectedContactId} />
+            <DatePicker date={selectedDate} onDateChange={setSelectedDate} />
+          </ScrollView>
+        </View>
+      </Modal>
+
       <CompletionModal />
 
       {/* Group By Modal */}
@@ -920,152 +976,160 @@ export default function RemindersScreen() {
         transparent={true}
         onRequestClose={() => setShowGroupByModal(false)}
       >
-        <TouchableOpacity 
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setShowGroupByModal(false)}
-        >
+        <Pressable style={styles.modalOverlay} onPress={() => setShowGroupByModal(false)}>
           <View style={styles.groupByModalContainer}>
             <Text style={styles.groupByModalTitle}>Group Reminders By</Text>
-            {(['none', 'day', 'week', 'month', 'year'] as GroupByOption[]).map((option) => (
-              <TouchableOpacity
+            {(['none', 'day', 'week', 'month', 'year'] as GroupByOption[]).map(option => (
+              <Button
                 key={option}
                 style={[
                   styles.groupByOption,
-                  groupBy === option && styles.selectedGroupByOption
+                  groupBy === option && styles.selectedGroupByOption,
                 ]}
                 onPress={() => {
                   setGroupBy(option);
                   setShowGroupByModal(false);
                 }}
               >
-                <Text style={[
-                  styles.groupByOptionText,
-                  groupBy === option && styles.selectedGroupByOptionText
-                ]}>
-                  {option === 'none' ? 'No Grouping' : option.charAt(0).toUpperCase() + option.slice(1)}
+                <Text
+                  style={[
+                    styles.groupByOptionText,
+                    groupBy === option && styles.selectedGroupByOptionText,
+                  ]}
+                >
+                  {option === 'none'
+                    ? 'No Grouping'
+                    : option.charAt(0).toUpperCase() + option.slice(1)}
                 </Text>
-                {groupBy === option && <CheckCircle size={20} color="#007AFF" />}
-              </TouchableOpacity>
+                {groupBy === option && <CheckCircle size={20} color={COLORS.PRIMARY} />}
+              </Button>
             ))}
           </View>
-        </TouchableOpacity>
+        </Pressable>
       </Modal>
     </SafeAreaView>
   );
 }
 
+// Common style patterns
+const commonStyles = {
+  card: {
+    backgroundColor: COLORS.WHITE,
+    borderRadius: BORDER_RADIUS.MD,
+    ...SHADOW.SMALL,
+  },
+  cardWithPadding: {
+    backgroundColor: COLORS.WHITE,
+    borderRadius: BORDER_RADIUS.MD,
+    padding: SPACING.LG,
+  },
+  rowCenter: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+  },
+  iconCircle: {
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    borderRadius: BORDER_RADIUS.ROUND,
+  },
+};
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: COLORS.BACKGROUND_LIGHT,
   },
   scrollContent: {
-    paddingVertical: 12,
-    paddingBottom: 20,
+    paddingVertical: SPACING.MD,
+    paddingBottom: SPACING.XL,
   },
   statsSection: {
-    paddingVertical: 20,
-    backgroundColor: '#fff',
-    marginTop: 8,
+    paddingVertical: SPACING.XL,
+    backgroundColor: COLORS.WHITE,
+    marginTop: SPACING.SM,
   },
   statsGrid: {
-    paddingHorizontal: 16,
-    gap: 12,
+    paddingHorizontal: SPACING.LG,
+    gap: SPACING.MD,
   },
   statCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
+    ...commonStyles.card,
+    padding: SPACING.MD,
+    ...commonStyles.rowCenter,
     minWidth: 140,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
   statNumber: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#000',
+    color: COLORS.TEXT_PRIMARY,
     marginBottom: 2,
   },
   statLabel: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#666',
+    color: COLORS.TEXT_SECONDARY,
     marginBottom: 1,
   },
   iconContainer: {
     width: 36,
     height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
+    ...commonStyles.iconCircle,
     marginRight: 10,
   },
   statContent: {
     flex: 1,
   },
   section: {
-    marginBottom: 20,
+    marginBottom: SPACING.XL,
   },
   sectionHeader: {
-    flexDirection: 'row',
+    ...commonStyles.rowCenter,
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-    paddingHorizontal: 16,
+    marginBottom: SPACING.MD,
+    paddingHorizontal: SPACING.LG,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#000',
-    marginBottom: 12,
-    paddingHorizontal: 16,
+    color: COLORS.TEXT_PRIMARY,
+    marginBottom: SPACING.MD,
+    paddingHorizontal: SPACING.LG,
   },
   addButton: {
-    backgroundColor: '#007AFF',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
+    backgroundColor: COLORS.PRIMARY,
+    ...commonStyles.rowCenter,
+    paddingHorizontal: SPACING.MD,
+    paddingVertical: SPACING.SM,
+    borderRadius: BORDER_RADIUS.SM,
     gap: 4,
   },
   addButtonText: {
-    color: '#fff',
+    color: COLORS.WHITE,
     fontSize: 14,
     fontWeight: '500',
   },
   remindersList: {
-    paddingHorizontal: 16,
-    gap: 12,
+    paddingHorizontal: SPACING.LG,
+    gap: SPACING.MD,
   },
   reminderCard: {
-    flexDirection: 'row',
+    ...commonStyles.rowCenter,
     alignItems: 'flex-start',
-    padding: 16,
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    padding: SPACING.LG,
+    backgroundColor: COLORS.WHITE,
+    borderRadius: BORDER_RADIUS.MD,
     borderWidth: 1,
-    borderColor: '#e9ecef',
-    gap: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    borderColor: COLORS.BORDER_LIGHT,
+    gap: SPACING.MD,
+    ...SHADOW.SMALL,
   },
   completedReminderCard: {
     opacity: 0.6,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: COLORS.BACKGROUND_GRAY,
   },
   overdueReminderCard: {
-    borderColor: '#FF3B30',
-    backgroundColor: '#FF3B30' + '08',
+    borderColor: COLORS.DESTRUCTIVE,
+    backgroundColor: COLORS.DESTRUCTIVE + '08',
   },
   reminderCheckbox: {
     marginTop: 2,
@@ -1076,213 +1140,199 @@ const styles = StyleSheet.create({
   reminderTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
+    color: COLORS.TEXT_PRIMARY,
     marginBottom: 6,
   },
   completedReminderTitle: {
     textDecorationLine: 'line-through',
-    color: '#8E8E93',
+    color: COLORS.TEXT_QUATERNARY,
   },
   reminderMeta: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: SPACING.MD,
     marginBottom: 6,
   },
   reminderMetaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    ...commonStyles.rowCenter,
     gap: 4,
   },
   reminderMetaText: {
     fontSize: 12,
-    color: '#8E8E93',
+    color: COLORS.TEXT_QUATERNARY,
   },
   overdueText: {
-    color: '#FF3B30',
+    color: COLORS.DESTRUCTIVE,
     fontWeight: '500',
   },
   todayText: {
-    color: '#FF9500',
+    color: COLORS.WARNING,
     fontWeight: '500',
   },
   reminderDescription: {
     fontSize: 14,
-    color: '#666',
+    color: COLORS.TEXT_SECONDARY,
     lineHeight: 18,
   },
   completedReminderDescription: {
-    color: '#8E8E93',
+    color: COLORS.TEXT_QUATERNARY,
   },
   reminderActions: {
     flexDirection: 'column',
-    gap: 8,
+    gap: SPACING.SM,
   },
   actionButton: {
     width: 32,
     height: 32,
-    borderRadius: 16,
-    backgroundColor: '#f8f9fa',
-    justifyContent: 'center',
-    alignItems: 'center',
+    ...commonStyles.iconCircle,
+    backgroundColor: COLORS.BACKGROUND_LIGHT,
   },
   infoSection: {
-    paddingHorizontal: 16,
-    marginBottom: 12,
-    marginTop: 8,
+    paddingHorizontal: SPACING.LG,
+    marginBottom: SPACING.MD,
+    marginTop: SPACING.SM,
   },
   infoCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    flexDirection: 'row',
+    ...commonStyles.card,
+    padding: SPACING.LG,
+    ...commonStyles.rowCenter,
     alignItems: 'flex-start',
-    gap: 12,
+    gap: SPACING.MD,
     borderLeftWidth: 3,
-    borderLeftColor: '#007AFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    borderLeftColor: COLORS.PRIMARY,
   },
   infoText: {
     flex: 1,
     fontSize: 14,
-    color: '#666',
+    color: COLORS.TEXT_SECONDARY,
     lineHeight: 20,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: SPACING.XXXL,
     paddingVertical: 40,
   },
   emptyTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#000',
-    marginTop: 16,
-    marginBottom: 8,
+    color: COLORS.TEXT_PRIMARY,
+    marginTop: SPACING.LG,
+    marginBottom: SPACING.SM,
   },
   emptyText: {
     fontSize: 16,
-    color: '#666',
+    color: COLORS.TEXT_SECONDARY,
     textAlign: 'center',
     lineHeight: 22,
-    marginBottom: 24,
+    marginBottom: SPACING.XXL,
   },
   emptyActionButton: {
-    backgroundColor: '#007AFF',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-    gap: 8,
+    backgroundColor: COLORS.PRIMARY,
+    ...commonStyles.rowCenter,
+    paddingHorizontal: SPACING.XL,
+    paddingVertical: SPACING.MD,
+    borderRadius: BORDER_RADIUS.MD,
+    gap: SPACING.SM,
   },
   emptyActionButtonText: {
-    color: '#fff',
+    color: COLORS.WHITE,
     fontSize: 16,
     fontWeight: '500',
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.WHITE,
   },
   modalHeader: {
-    flexDirection: 'row',
+    ...commonStyles.rowCenter,
     justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
+    padding: SPACING.LG,
     borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
+    borderBottomColor: COLORS.BORDER_LIGHT,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#000',
+    color: COLORS.TEXT_PRIMARY,
   },
   saveButton: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#007AFF',
+    color: COLORS.PRIMARY,
   },
   modalContent: {
     flex: 1,
-    padding: 16,
+    padding: SPACING.LG,
   },
   inputGroup: {
-    marginBottom: 20,
+    marginBottom: SPACING.XL,
   },
   inputLabel: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#000',
-    marginBottom: 8,
+    color: COLORS.TEXT_PRIMARY,
+    marginBottom: SPACING.SM,
   },
   textInput: {
     borderWidth: 1,
-    borderColor: '#e9ecef',
-    borderRadius: 8,
-    padding: 12,
+    borderColor: COLORS.BORDER_LIGHT,
+    borderRadius: BORDER_RADIUS.SM,
+    padding: SPACING.MD,
     fontSize: 16,
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.WHITE,
   },
   textArea: {
     height: 80,
     textAlignVertical: 'top',
   },
   contactPicker: {
-    marginBottom: 20,
+    marginBottom: SPACING.XL,
   },
   contactSearchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F2F2F7',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 12,
-    gap: 8,
+    ...commonStyles.rowCenter,
+    backgroundColor: COLORS.BACKGROUND,
+    borderRadius: SPACING.MD,
+    paddingHorizontal: SPACING.MD,
+    paddingVertical: SPACING.MD,
+    marginBottom: SPACING.MD,
+    gap: SPACING.SM,
   },
   contactSearchInput: {
     flex: 1,
     fontSize: 16,
-    color: '#000',
+    color: COLORS.TEXT_PRIMARY,
   },
   selectedContactCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#007AFF15',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 12,
-    gap: 8,
+    ...commonStyles.rowCenter,
+    backgroundColor: COLORS.PRIMARY + '15',
+    borderRadius: SPACING.MD,
+    paddingHorizontal: SPACING.MD,
+    paddingVertical: SPACING.MD,
+    marginBottom: SPACING.MD,
+    gap: SPACING.SM,
     borderWidth: 1,
-    borderColor: '#007AFF30',
+    borderColor: COLORS.PRIMARY + '30',
   },
   selectedContactName: {
     flex: 1,
     fontSize: 16,
     fontWeight: '600',
-    color: '#007AFF',
+    color: COLORS.PRIMARY,
   },
   contactScrollView: {
     maxHeight: 200,
   },
   contactItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 12,
+    ...commonStyles.rowCenter,
+    paddingVertical: SPACING.MD,
+    paddingHorizontal: SPACING.MD,
     borderBottomWidth: 1,
-    borderBottomColor: '#F2F2F7',
+    borderBottomColor: COLORS.BACKGROUND,
   },
   selectedContactItem: {
-    backgroundColor: '#F0F8FF',
+    backgroundColor: COLORS.PRIMARY + '08',
   },
   contactItemContent: {
     flex: 1,
@@ -1290,98 +1340,97 @@ const styles = StyleSheet.create({
   contactItemName: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#000',
+    color: COLORS.TEXT_PRIMARY,
     marginBottom: 2,
   },
   selectedContactItemName: {
-    color: '#007AFF',
+    color: COLORS.PRIMARY,
   },
   contactItemPhone: {
     fontSize: 14,
-    color: '#8E8E93',
+    color: COLORS.TEXT_TERTIARY,
   },
   contactChip: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: COLORS.BACKGROUND_LIGHT,
     borderWidth: 1,
-    borderColor: '#e9ecef',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginRight: 8,
+    borderColor: COLORS.BORDER_LIGHT,
+    borderRadius: SPACING.XL,
+    paddingHorizontal: SPACING.LG,
+    paddingVertical: SPACING.SM,
+    marginRight: SPACING.SM,
   },
   selectedContactChip: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
+    backgroundColor: COLORS.PRIMARY,
+    borderColor: COLORS.PRIMARY,
   },
   contactChipText: {
     fontSize: 14,
-    color: '#666',
+    color: COLORS.TEXT_SECONDARY,
     fontWeight: '500',
   },
   selectedContactChipText: {
-    color: '#fff',
+    color: COLORS.WHITE,
   },
   datePicker: {
-    marginBottom: 20,
+    marginBottom: SPACING.XL,
   },
   dateScrollView: {
     maxHeight: 50,
-    marginBottom: 8,
+    marginBottom: SPACING.SM,
   },
   dateChip: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: COLORS.BACKGROUND_LIGHT,
     borderWidth: 1,
-    borderColor: '#e9ecef',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginRight: 8,
+    borderColor: COLORS.BORDER_LIGHT,
+    borderRadius: SPACING.XL,
+    paddingHorizontal: SPACING.LG,
+    paddingVertical: SPACING.SM,
+    marginRight: SPACING.SM,
   },
   selectedDateChip: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
+    backgroundColor: COLORS.PRIMARY,
+    borderColor: COLORS.PRIMARY,
   },
   dateChipText: {
     fontSize: 14,
-    color: '#666',
+    color: COLORS.TEXT_SECONDARY,
     fontWeight: '500',
   },
   selectedDateChipText: {
-    color: '#fff',
+    color: COLORS.WHITE,
   },
   selectedDateText: {
     fontSize: 14,
-    color: '#666',
+    color: COLORS.TEXT_SECONDARY,
     fontStyle: 'italic',
   },
   noContactsContainer: {
-    backgroundColor: '#f8f9fa',
-    borderRadius: 8,
-    padding: 16,
+    backgroundColor: COLORS.BACKGROUND_LIGHT,
+    borderRadius: BORDER_RADIUS.SM,
+    padding: SPACING.LG,
     alignItems: 'center',
   },
   noContactsText: {
     fontSize: 14,
-    color: '#666',
+    color: COLORS.TEXT_SECONDARY,
     textAlign: 'center',
   },
   phoneText: {
     fontSize: 11,
-    color: '#999',
+    color: COLORS.TEXT_TERTIARY,
   },
   timeDetected: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
-    paddingHorizontal: 8,
+    ...commonStyles.rowCenter,
+    marginTop: SPACING.SM,
+    paddingHorizontal: SPACING.SM,
     paddingVertical: 6,
-    backgroundColor: '#007AFF10',
-    borderRadius: 8,
+    backgroundColor: COLORS.PRIMARY + '10',
+    borderRadius: BORDER_RADIUS.SM,
     gap: 6,
   },
   timeDetectedText: {
     fontSize: 13,
-    color: '#007AFF',
+    color: COLORS.PRIMARY,
     fontWeight: '500',
   },
   completionModalOverlay: {
@@ -1389,35 +1438,31 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: SPACING.XL,
   },
   completionModalContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 24,
+    backgroundColor: COLORS.WHITE,
+    borderRadius: BORDER_RADIUS.LG,
+    padding: SPACING.XXL,
     width: '100%',
     maxWidth: 400,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 8,
+    ...SHADOW.LARGE,
   },
   completionModalHeader: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: SPACING.XXL,
   },
   completionModalTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#000',
-    marginTop: 12,
-    marginBottom: 8,
+    color: COLORS.TEXT_PRIMARY,
+    marginTop: SPACING.MD,
+    marginBottom: SPACING.SM,
     textAlign: 'center',
   },
   completionModalSubtitle: {
     fontSize: 14,
-    color: '#666',
+    color: COLORS.TEXT_SECONDARY,
     textAlign: 'center',
     lineHeight: 20,
   },
@@ -1426,220 +1471,213 @@ const styles = StyleSheet.create({
   },
   completedReminderInfo: {
     alignItems: 'center',
-    marginBottom: 24,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
+    marginBottom: SPACING.XXL,
+    paddingVertical: SPACING.LG,
+    paddingHorizontal: SPACING.XL,
+    backgroundColor: COLORS.BACKGROUND_LIGHT,
+    borderRadius: BORDER_RADIUS.MD,
     width: '100%',
   },
   completedReminderContact: {
     fontSize: 12,
-    color: '#666',
+    color: COLORS.TEXT_SECONDARY,
     marginTop: 4,
   },
   completionActions: {
     width: '100%',
-    gap: 12,
+    gap: SPACING.MD,
   },
   completionActionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    ...commonStyles.rowCenter,
     justifyContent: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    gap: 12,
+    paddingVertical: SPACING.LG,
+    paddingHorizontal: SPACING.XL,
+    borderRadius: BORDER_RADIUS.MD,
+    gap: SPACING.MD,
   },
   archiveButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: COLORS.PRIMARY,
   },
   deleteButton: {
-    backgroundColor: '#FF3B30',
+    backgroundColor: COLORS.DESTRUCTIVE,
   },
   keepButton: {
-    backgroundColor: '#34C759',
+    backgroundColor: COLORS.SUCCESS,
   },
   completionActionText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: COLORS.WHITE,
   },
   completionActionSubtext: {
     fontSize: 12,
     color: 'rgba(255, 255, 255, 0.8)',
-    marginLeft: 8,
+    marginLeft: SPACING.SM,
   },
   tabContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    marginBottom: 12,
-    gap: 8,
+    ...commonStyles.rowCenter,
+    paddingHorizontal: SPACING.LG,
+    marginBottom: SPACING.MD,
+    gap: SPACING.SM,
   },
   tab: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    ...commonStyles.rowCenter,
     justifyContent: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    backgroundColor: '#fff',
-    borderRadius: 10,
+    paddingVertical: SPACING.MD,
+    paddingHorizontal: SPACING.MD,
+    backgroundColor: COLORS.WHITE,
+    borderRadius: SPACING.MD,
     borderWidth: 1,
-    borderColor: '#e9ecef',
+    borderColor: COLORS.BORDER_LIGHT,
     gap: 6,
   },
   activeTab: {
-    backgroundColor: '#007AFF10',
-    borderColor: '#007AFF',
+    backgroundColor: COLORS.PRIMARY + '10',
+    borderColor: COLORS.PRIMARY,
   },
   tabText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
+    color: COLORS.TEXT_SECONDARY,
   },
   activeTabText: {
-    color: '#007AFF',
+    color: COLORS.PRIMARY,
   },
   tabBadge: {
-    backgroundColor: '#66666620',
+    backgroundColor: COLORS.TEXT_SECONDARY + '20',
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 10,
+    borderRadius: SPACING.MD,
     minWidth: 20,
     alignItems: 'center',
   },
   activeTabBadge: {
-    backgroundColor: '#007AFF20',
+    backgroundColor: COLORS.PRIMARY + '20',
   },
   tabBadgeText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#666',
+    color: COLORS.TEXT_SECONDARY,
   },
   activeTabBadgeText: {
-    color: '#007AFF',
+    color: COLORS.PRIMARY,
   },
   sectionTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+    ...commonStyles.rowCenter,
+    gap: SPACING.SM,
     flex: 1,
   },
   sectionBadge: {
-    backgroundColor: '#007AFF20',
-    paddingHorizontal: 8,
+    backgroundColor: COLORS.PRIMARY + '20',
+    paddingHorizontal: SPACING.SM,
     paddingVertical: 2,
-    borderRadius: 10,
+    borderRadius: SPACING.MD,
     minWidth: 24,
     alignItems: 'center',
   },
   sectionBadgeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#007AFF',
+    color: COLORS.PRIMARY,
+  },
+  orderSectionBadge: {
+    backgroundColor: COLORS.WARNING + '20',
+  },
+  orderSectionBadgeText: {
+    color: COLORS.WARNING,
   },
   orderReminderCard: {
-    borderColor: '#FF9500',
-    backgroundColor: '#FF950008',
+    borderColor: COLORS.WARNING,
+    backgroundColor: COLORS.WARNING + '08',
   },
   reminderHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    ...commonStyles.rowCenter,
     gap: 6,
     marginBottom: 2,
   },
   orderCompletionModal: {
     borderTopWidth: 3,
-    borderTopColor: '#FF9500',
+    borderTopColor: COLORS.WARNING,
   },
   completionIconWrapper: {
     width: 48,
     height: 48,
-    borderRadius: 24,
-    backgroundColor: '#007AFF',
-    justifyContent: 'center',
-    alignItems: 'center',
+    ...commonStyles.iconCircle,
+    backgroundColor: COLORS.PRIMARY,
   },
   orderCompletionIcon: {
-    backgroundColor: '#FF9500',
+    backgroundColor: COLORS.WARNING,
   },
   orderItemsCount: {
     fontSize: 13,
-    color: '#FF9500',
+    color: COLORS.WARNING,
     fontWeight: '500',
     marginTop: 2,
   },
   deliveredButton: {
-    backgroundColor: '#FF9500',
+    backgroundColor: COLORS.WARNING,
   },
   groupBySection: {
-    flexDirection: 'row',
+    ...commonStyles.rowCenter,
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 12,
+    paddingHorizontal: SPACING.LG,
+    marginBottom: SPACING.MD,
   },
   groupByButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    ...commonStyles.rowCenter,
     gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: '#fff',
-    borderRadius: 8,
+    paddingHorizontal: SPACING.MD,
+    paddingVertical: SPACING.SM,
+    backgroundColor: COLORS.WHITE,
+    borderRadius: BORDER_RADIUS.SM,
     borderWidth: 1,
-    borderColor: '#e9ecef',
+    borderColor: COLORS.BORDER_LIGHT,
   },
   groupByButtonText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#007AFF',
+    color: COLORS.PRIMARY,
   },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: SPACING.XL,
   },
   groupByModalContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 20,
+    backgroundColor: COLORS.WHITE,
+    borderRadius: BORDER_RADIUS.LG,
+    padding: SPACING.XL,
     width: '90%',
     maxWidth: 350,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 8,
+    ...SHADOW.LARGE,
   },
   groupByModalTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#000',
-    marginBottom: 16,
+    color: COLORS.TEXT_PRIMARY,
+    marginBottom: SPACING.LG,
     textAlign: 'center',
   },
   groupByOption: {
-    flexDirection: 'row',
+    ...commonStyles.rowCenter,
     justifyContent: 'space-between',
-    alignItems: 'center',
     paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingHorizontal: SPACING.LG,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: COLORS.BORDER_LIGHT,
   },
   selectedGroupByOption: {
-    backgroundColor: '#007AFF10',
+    backgroundColor: COLORS.PRIMARY + '10',
   },
   groupByOptionText: {
     fontSize: 16,
-    color: '#333',
+    color: COLORS.TEXT_SECONDARY,
   },
   selectedGroupByOptionText: {
-    color: '#007AFF',
+    color: COLORS.PRIMARY,
     fontWeight: '600',
   },
 });
