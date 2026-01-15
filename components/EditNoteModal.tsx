@@ -1,7 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
-import { X, Save, Tag, Plus, Trash2, Circle, CheckCircle2, Folder, ChevronDown, ChevronUp } from 'lucide-react-native';
-import { CallNote, NoteStatus, NoteFolder } from '@/types/contact';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Alert,
+} from 'react-native';
+import {
+  X,
+  Save,
+  Tag,
+  Plus,
+  Trash2,
+  Circle,
+  CheckCircle2,
+  Folder,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react-native';
+import { CallNote, NoteStatus } from '@/types/contact';
 import { useContacts } from '@/hooks/contacts-store';
 
 interface EditNoteModalProps {
@@ -30,7 +52,13 @@ interface TemplateField {
   value: string;
 }
 
-export default function EditNoteModal({ visible, note, onClose, onSave, onDelete }: EditNoteModalProps) {
+export default function EditNoteModal({
+  visible,
+  note,
+  onClose,
+  onSave,
+  onDelete,
+}: EditNoteModalProps) {
   const { folders, noteTemplate, presetTags } = useContacts();
   const [templateFields, setTemplateFields] = useState<TemplateField[]>([]);
   const [selectedStatus, setSelectedStatus] = useState<NoteStatus>('follow-up');
@@ -48,40 +76,40 @@ export default function EditNoteModal({ visible, note, onClose, onSave, onDelete
 
   const parseNoteIntoFields = (noteContent: string, template: string): TemplateField[] => {
     const fields: TemplateField[] = [];
-    
+
     // Get template sections (excluding the header line)
     const templateLines = template.split('\n').filter(line => line.trim());
     const templateSections = templateLines.filter(line => line.endsWith(':'));
-    
+
     // Parse the note content
     const noteLines = noteContent.split('\n');
     let currentSection = '';
     let currentContent: string[] = [];
-    
+
     // Skip the header line if it exists
     let startIndex = 0;
     if (noteLines[0]?.match(/^Call with .* - /)) {
       startIndex = 1;
     }
-    
+
     for (let i = startIndex; i < noteLines.length; i++) {
       const line = noteLines[i];
-      
+
       // Check if this line is a section header
-      const isSection = templateSections.some(section => 
-        line.trim() === section || line.trim() === section.replace(':', '')
+      const isSection = templateSections.some(
+        section => line.trim() === section || line.trim() === section.replace(':', '')
       );
-      
+
       if (isSection) {
         // Save previous section if exists
         if (currentSection) {
           fields.push({
             id: currentSection.toLowerCase().replace(/[^a-z0-9]/g, ''),
             label: currentSection,
-            value: currentContent.join('\n').trim()
+            value: currentContent.join('\n').trim(),
           });
         }
-        
+
         // Start new section
         currentSection = line.trim().replace(':', '');
         currentContent = [];
@@ -90,30 +118,30 @@ export default function EditNoteModal({ visible, note, onClose, onSave, onDelete
         currentContent.push(line);
       }
     }
-    
+
     // Save last section
     if (currentSection) {
       fields.push({
         id: currentSection.toLowerCase().replace(/[^a-z0-9]/g, ''),
         label: currentSection,
-        value: currentContent.join('\n').trim()
+        value: currentContent.join('\n').trim(),
       });
     }
-    
+
     // Add any missing template sections
     templateSections.forEach(section => {
       const sectionLabel = section.replace(':', '');
       const sectionId = sectionLabel.toLowerCase().replace(/[^a-z0-9]/g, '');
-      
+
       if (!fields.find(f => f.id === sectionId)) {
         fields.push({
           id: sectionId,
           label: sectionLabel,
-          value: ''
+          value: '',
         });
       }
     });
-    
+
     return fields;
   };
 
@@ -122,10 +150,10 @@ export default function EditNoteModal({ visible, note, onClose, onSave, onDelete
       // Parse note into template fields
       const fields = parseNoteIntoFields(note.note, noteTemplate);
       setTemplateFields(fields);
-      
+
       // Start with all sections collapsed
       setExpandedSections(new Set());
-      
+
       setSelectedStatus(note.status);
       setCustomStatus(note.customStatus || '');
       setTags(note.tags || []);
@@ -140,7 +168,7 @@ export default function EditNoteModal({ visible, note, onClose, onSave, onDelete
 
     // Reconstruct the note text from template fields
     let noteText = `Call with ${note.contactName} - ${new Date(note.callStartTime).toLocaleDateString()}\n\n`;
-    
+
     templateFields.forEach(field => {
       if (field.value.trim()) {
         noteText += `${field.label}:\n${field.value}\n\n`;
@@ -164,10 +192,8 @@ export default function EditNoteModal({ visible, note, onClose, onSave, onDelete
   };
 
   const updateFieldValue = (fieldId: string, value: string) => {
-    setTemplateFields(prev => 
-      prev.map(field => 
-        field.id === fieldId ? { ...field, value } : field
-      )
+    setTemplateFields(prev =>
+      prev.map(field => (field.id === fieldId ? { ...field, value } : field))
     );
   };
 
@@ -225,11 +251,16 @@ export default function EditNoteModal({ visible, note, onClose, onSave, onDelete
   const getStatusText = (status: NoteStatus, customStatus?: string) => {
     if (status === 'other' && customStatus) return customStatus;
     switch (status) {
-      case 'follow-up': return 'Follow-up';
-      case 'waiting-reply': return 'Waiting Reply';
-      case 'closed': return 'Closed';
-      case 'other': return 'Other';
-      default: return 'Unknown';
+      case 'follow-up':
+        return 'Follow-up';
+      case 'waiting-reply':
+        return 'Waiting Reply';
+      case 'closed':
+        return 'Closed';
+      case 'other':
+        return 'Other';
+      default:
+        return 'Unknown';
     }
   };
 
@@ -245,12 +276,8 @@ export default function EditNoteModal({ visible, note, onClose, onSave, onDelete
   if (!visible || !note) return null;
 
   return (
-    <Modal
-      visible={true}
-      animationType="slide"
-      presentationStyle="pageSheet"
-    >
-      <KeyboardAvoidingView 
+    <Modal visible={true} animationType="slide" presentationStyle="pageSheet">
+      <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
@@ -259,9 +286,9 @@ export default function EditNoteModal({ visible, note, onClose, onSave, onDelete
           <TouchableOpacity onPress={onClose}>
             <X size={24} color="#007AFF" />
           </TouchableOpacity>
-          
+
           <Text style={styles.title}>Edit Note</Text>
-          
+
           <View style={styles.headerActions}>
             {onDelete && (
               <TouchableOpacity onPress={handleDelete} style={styles.deleteButton}>
@@ -274,39 +301,48 @@ export default function EditNoteModal({ visible, note, onClose, onSave, onDelete
           </View>
         </View>
 
-        <ScrollView 
-          style={styles.content} 
+        <ScrollView
+          style={styles.content}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.scrollContent}
         >
           <Text style={styles.contactName}>{note.contactName}</Text>
           <Text style={styles.contactPhone}>
-            {new Date(note.callStartTime).toLocaleDateString()} • {new Date(note.callStartTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            {new Date(note.callStartTime).toLocaleDateString()} •{' '}
+            {new Date(note.callStartTime).toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
           </Text>
-          
+
           {/* Template Fields */}
           <Text style={styles.sectionTitle}>Call Notes</Text>
           <Text style={styles.sectionDescription}>
             Fill in the sections that apply to your call
           </Text>
-          
+
           <View style={styles.templateSections}>
             {templateFields.map((field, index) => (
-              <View key={field.id} style={[styles.templateSection, index === templateFields.length - 1 && styles.lastTemplateSection]}>
-                <TouchableOpacity 
+              <View
+                key={field.id}
+                style={[
+                  styles.templateSection,
+                  index === templateFields.length - 1 && styles.lastTemplateSection,
+                ]}
+              >
+                <TouchableOpacity
                   style={styles.sectionHeader}
                   onPress={() => toggleSectionExpanded(field.id)}
                 >
-                  <Text style={styles.templateSectionLabel}>
-                    {field.label}
-                  </Text>
-                  {expandedSections.has(field.id) ? 
-                    <ChevronUp size={20} color="#666" /> : 
+                  <Text style={styles.templateSectionLabel}>{field.label}</Text>
+                  {expandedSections.has(field.id) ? (
+                    <ChevronUp size={20} color="#666" />
+                  ) : (
                     <ChevronDown size={20} color="#666" />
-                  }
+                  )}
                 </TouchableOpacity>
-                
+
                 {expandedSections.has(field.id) && (
                   <View style={styles.sectionContent}>
                     <TextInput
@@ -316,7 +352,7 @@ export default function EditNoteModal({ visible, note, onClose, onSave, onDelete
                       multiline
                       textAlignVertical="top"
                       value={field.value}
-                      onChangeText={(text) => updateFieldValue(field.id, text)}
+                      onChangeText={text => updateFieldValue(field.id, text)}
                     />
                   </View>
                 )}
@@ -327,19 +363,17 @@ export default function EditNoteModal({ visible, note, onClose, onSave, onDelete
           {/* Status Selection */}
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>Status</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.selector}
               onPress={() => setShowStatusPicker(!showStatusPicker)}
             >
               <Tag size={16} color="#007AFF" />
-              <Text style={styles.selectorText}>
-                {getStatusText(selectedStatus, customStatus)}
-              </Text>
+              <Text style={styles.selectorText}>{getStatusText(selectedStatus, customStatus)}</Text>
             </TouchableOpacity>
-            
+
             {showStatusPicker && (
               <View style={styles.picker}>
-                {(['follow-up', 'waiting-reply', 'closed', 'other'] as NoteStatus[]).map((status) => (
+                {(['follow-up', 'waiting-reply', 'closed', 'other'] as NoteStatus[]).map(status => (
                   <TouchableOpacity
                     key={status}
                     style={styles.pickerOption}
@@ -350,13 +384,18 @@ export default function EditNoteModal({ visible, note, onClose, onSave, onDelete
                       }
                     }}
                   >
-                    <Text style={[styles.pickerOptionText, selectedStatus === status && styles.selectedText]}>
+                    <Text
+                      style={[
+                        styles.pickerOptionText,
+                        selectedStatus === status && styles.selectedText,
+                      ]}
+                    >
                       {getStatusText(status)}
                     </Text>
                     {selectedStatus === status && <CheckCircle2 size={16} color="#007AFF" />}
                   </TouchableOpacity>
                 ))}
-                
+
                 {selectedStatus === 'other' && (
                   <TextInput
                     style={styles.customInput}
@@ -374,17 +413,21 @@ export default function EditNoteModal({ visible, note, onClose, onSave, onDelete
           {/* Priority Selection */}
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>Priority</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.selector}
               onPress={() => setShowPriorityPicker(!showPriorityPicker)}
             >
-              <Circle size={16} color={PRIORITY_COLORS[priority]} fill={PRIORITY_COLORS[priority]} />
+              <Circle
+                size={16}
+                color={PRIORITY_COLORS[priority]}
+                fill={PRIORITY_COLORS[priority]}
+              />
               <Text style={styles.selectorText}>{PRIORITY_LABELS[priority]}</Text>
             </TouchableOpacity>
-            
+
             {showPriorityPicker && (
               <View style={styles.picker}>
-                {(['low', 'medium', 'high'] as const).map((p) => (
+                {(['low', 'medium', 'high'] as const).map(p => (
                   <TouchableOpacity
                     key={p}
                     style={styles.pickerOption}
@@ -395,7 +438,9 @@ export default function EditNoteModal({ visible, note, onClose, onSave, onDelete
                   >
                     <View style={styles.priorityOption}>
                       <Circle size={16} color={PRIORITY_COLORS[p]} fill={PRIORITY_COLORS[p]} />
-                      <Text style={[styles.pickerOptionText, priority === p && styles.selectedText]}>
+                      <Text
+                        style={[styles.pickerOptionText, priority === p && styles.selectedText]}
+                      >
                         {PRIORITY_LABELS[p]}
                       </Text>
                     </View>
@@ -409,20 +454,18 @@ export default function EditNoteModal({ visible, note, onClose, onSave, onDelete
           {/* Folder Selection */}
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>Folder</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.selector}
               onPress={() => setShowFolderPicker(!showFolderPicker)}
             >
-              <Folder 
-                size={16} 
-                color={getSelectedFolder()?.color || '#999'} 
-                fill={getSelectedFolder()?.color ? getSelectedFolder()!.color + '20' : '#f0f0f0'} 
+              <Folder
+                size={16}
+                color={getSelectedFolder()?.color || '#999'}
+                fill={getSelectedFolder()?.color ? getSelectedFolder()!.color + '20' : '#f0f0f0'}
               />
-              <Text style={styles.selectorText}>
-                {getFolderDisplayText()}
-              </Text>
+              <Text style={styles.selectorText}>{getFolderDisplayText()}</Text>
             </TouchableOpacity>
-            
+
             {showFolderPicker && (
               <View style={styles.picker}>
                 <TouchableOpacity
@@ -434,14 +477,16 @@ export default function EditNoteModal({ visible, note, onClose, onSave, onDelete
                 >
                   <View style={styles.folderOption}>
                     <Folder size={16} color="#999" fill="#f0f0f0" />
-                    <Text style={[styles.pickerOptionText, !selectedFolderId && styles.selectedText]}>
+                    <Text
+                      style={[styles.pickerOptionText, !selectedFolderId && styles.selectedText]}
+                    >
                       No Folder
                     </Text>
                   </View>
                   {!selectedFolderId && <CheckCircle2 size={16} color="#007AFF" />}
                 </TouchableOpacity>
-                
-                {folders.map((folder) => (
+
+                {folders.map(folder => (
                   <TouchableOpacity
                     key={folder.id}
                     style={styles.pickerOption}
@@ -452,7 +497,12 @@ export default function EditNoteModal({ visible, note, onClose, onSave, onDelete
                   >
                     <View style={styles.folderOption}>
                       <Folder size={16} color={folder.color} fill={folder.color + '20'} />
-                      <Text style={[styles.pickerOptionText, selectedFolderId === folder.id && styles.selectedText]}>
+                      <Text
+                        style={[
+                          styles.pickerOptionText,
+                          selectedFolderId === folder.id && styles.selectedText,
+                        ]}
+                      >
                         {folder.name}
                       </Text>
                     </View>
@@ -478,31 +528,35 @@ export default function EditNoteModal({ visible, note, onClose, onSave, onDelete
           {/* Tags */}
           <View style={[styles.section, styles.lastSection]}>
             <Text style={styles.sectionLabel}>Tags</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.selector}
               onPress={() => setShowTagPicker(!showTagPicker)}
             >
               <Tag size={16} color="#007AFF" />
               <Text style={styles.selectorText}>
-                {tags.length > 0 ? `${tags.length} tag${tags.length > 1 ? 's' : ''} selected` : 'Select tags'}
+                {tags.length > 0
+                  ? `${tags.length} tag${tags.length > 1 ? 's' : ''} selected`
+                  : 'Select tags'}
               </Text>
             </TouchableOpacity>
-            
+
             {showTagPicker && (
               <View style={styles.picker}>
-                {presetTags.map((tag) => (
+                {presetTags.map(tag => (
                   <TouchableOpacity
                     key={tag}
                     style={styles.pickerOption}
                     onPress={() => togglePresetTag(tag)}
                   >
-                    <Text style={[styles.pickerOptionText, tags.includes(tag) && styles.selectedText]}>
+                    <Text
+                      style={[styles.pickerOptionText, tags.includes(tag) && styles.selectedText]}
+                    >
                       {tag}
                     </Text>
                     {tags.includes(tag) && <CheckCircle2 size={16} color="#007AFF" />}
                   </TouchableOpacity>
                 ))}
-                
+
                 <View style={styles.addTagContainer}>
                   <TextInput
                     style={styles.customInput}
@@ -522,7 +576,7 @@ export default function EditNoteModal({ visible, note, onClose, onSave, onDelete
                 </View>
               </View>
             )}
-            
+
             {tags.length > 0 && (
               <View style={styles.tagsContainer}>
                 {tags.map((tag, index) => (

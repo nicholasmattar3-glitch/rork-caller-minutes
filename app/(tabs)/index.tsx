@@ -1,129 +1,151 @@
-import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, SectionList, TextInput, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
-import { Users, Search, Phone, Calendar } from 'lucide-react-native';
+import React, { useMemo, useState, ComponentType } from 'react';
+import { View, Text, StyleSheet, SectionList, TextInput } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Users, Search, Calendar } from 'lucide-react-native';
 import { useContacts } from '@/hooks/contacts-store';
 import ContactCard from '@/components/ContactCard';
 import NoteModal from '@/components/NoteModal';
 import CallGroupManager from '@/components/CallGroupManager';
 import { GroupByOption } from '@/types/contact';
+import Button from '@/components/Button';
+
+type ViewMode = 'contacts' | 'calls';
+
+const COLORS = {
+  background: '#F2F2F7',
+  white: '#fff',
+  black: '#000',
+  primary: '#007AFF',
+  secondary: '#8E8E93',
+  border: '#C6C6C8',
+  icon: '#C7C7CC',
+  text: '#333',
+  placeholder: '#999',
+};
+
+const SPACING = {
+  xs: 6,
+  sm: 8,
+  md: 10,
+  lg: 16,
+  xl: 20,
+  xxl: 32,
+};
 
 export default function ContactsScreen() {
-  const { contacts, notes, isLoading } = useContacts();
+  const { contacts, notes } = useContacts();
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState<'contacts' | 'calls'>('contacts');
+  const [viewMode, setViewMode] = useState<ViewMode>('contacts');
   const [groupBy, setGroupBy] = useState<GroupByOption>('day');
 
   const filteredContacts = useMemo(() => {
     if (!searchQuery.trim()) return contacts;
     const query = searchQuery.toLowerCase();
-    return contacts.filter(contact => 
-      contact.name.toLowerCase().includes(query) ||
-      contact.phoneNumber.includes(query)
+    return contacts.filter(
+      contact => contact.name.toLowerCase().includes(query) || contact.phoneNumber.includes(query)
     );
   }, [contacts, searchQuery]);
 
   const sectionedContacts = useMemo(() => {
     if (!filteredContacts.length) return [];
-    
+
     const sorted = [...filteredContacts].sort((a, b) => a.name.localeCompare(b.name));
     const sections: { title: string; data: typeof contacts }[] = [];
-    
+
     sorted.forEach(contact => {
       const firstLetter = contact.name.charAt(0).toUpperCase();
       let section = sections.find(s => s.title === firstLetter);
-      
+
       if (!section) {
         section = { title: firstLetter, data: [] };
         sections.push(section);
       }
-      
+
       section.data.push(contact);
     });
-    
+
     return sections.sort((a, b) => a.title.localeCompare(b.title));
   }, [filteredContacts]);
 
-  const renderContact = ({ item }: { item: any }) => (
-    <ContactCard contact={item} />
-  );
+  const TabButton = ({
+    mode,
+    icon: Icon,
+    label,
+  }: {
+    mode: ViewMode;
+    icon: ComponentType<{ size: number; color: string }>;
+    label: string;
+  }) => {
+    const isActive = viewMode === mode;
+    return (
+      <Button
+        style={[styles.tab, isActive && styles.activeTab]}
+        onPress={() => setViewMode(mode)}
+      >
+        <Icon size={18} color={isActive ? COLORS.primary : COLORS.secondary} />
+        <Text style={[styles.tabText, isActive && styles.activeTabText]}>{label}</Text>
+      </Button>
+    );
+  };
 
-  const renderSectionHeader = ({ section }: { section: { title: string } }) => (
-    <View style={styles.sectionHeader}>
-      <Text style={styles.sectionHeaderText}>{section.title}</Text>
+  const SearchBar = () => (
+    <View style={styles.searchContainer}>
+      <View style={styles.searchInputContainer}>
+        <Search size={16} color={COLORS.placeholder} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search contacts..."
+          placeholderTextColor={COLORS.placeholder}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+      </View>
     </View>
   );
 
-  const renderEmpty = () => (
-    <View style={styles.emptyContainer}>
-      <Users size={48} color="#C7C7CC" />
-      <Text style={styles.emptyTitle}>No Contacts</Text>
-      <Text style={styles.emptyText}>
-        Go to Settings to add contacts manually or import from your device
-      </Text>
-    </View>
+  const ContactsView = () => (
+    <>
+      <SearchBar />
+      {sectionedContacts.length > 0 ? (
+        <SectionList
+          sections={sectionedContacts}
+          renderItem={({ item }) => <ContactCard contact={item} />}
+          renderSectionHeader={({ section }: { section: { title: string } }) => {
+            return (
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionHeaderText}>{section.title}</Text>
+              </View>
+            );
+          }}
+          keyExtractor={item => item.id}
+          style={styles.list}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          stickySectionHeadersEnabled={true}
+        />
+      ) : (
+        <View style={styles.emptyContainer}>
+          <Users size={48} color={COLORS.icon} />
+          <Text style={styles.emptyTitle}>No Contacts</Text>
+          <Text style={styles.emptyText}>
+            Go to Settings to add contacts manually or import from your device
+          </Text>
+        </View>
+      )}
+    </>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* View Mode Tabs */}
+    <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tab, viewMode === 'contacts' && styles.activeTab]}
-          onPress={() => setViewMode('contacts')}
-        >
-          <Users size={18} color={viewMode === 'contacts' ? '#007AFF' : '#8E8E93'} />
-          <Text style={[styles.tabText, viewMode === 'contacts' && styles.activeTabText]}>
-            Contacts
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, viewMode === 'calls' && styles.activeTab]}
-          onPress={() => setViewMode('calls')}
-        >
-          <Calendar size={18} color={viewMode === 'calls' ? '#007AFF' : '#8E8E93'} />
-          <Text style={[styles.tabText, viewMode === 'calls' && styles.activeTabText]}>
-            Call History
-          </Text>
-        </TouchableOpacity>
+        <TabButton mode="contacts" icon={Users} label="Contacts" />
+        <TabButton mode="calls" icon={Calendar} label="Call History" />
       </View>
 
       {viewMode === 'contacts' ? (
-        <>
-          {/* Search Bar */}
-          <View style={styles.searchContainer}>
-            <View style={styles.searchInputContainer}>
-              <Search size={16} color="#999" />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search contacts..."
-                placeholderTextColor="#999"
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
-            </View>
-          </View>
-
-          {sectionedContacts.length > 0 ? (
-            <SectionList
-              sections={sectionedContacts}
-              renderItem={renderContact}
-              renderSectionHeader={renderSectionHeader}
-              keyExtractor={(item) => item.id}
-              style={styles.list}
-              contentContainerStyle={styles.listContent}
-              showsVerticalScrollIndicator={false}
-              stickySectionHeadersEnabled={true}
-            />
-          ) : (
-            renderEmpty()
-          )}
-        </>
+        <ContactsView />
       ) : (
-        <CallGroupManager
-          notes={notes}
-          groupBy={groupBy}
-          onGroupByChange={setGroupBy}
-        />
+        <CallGroupManager notes={notes} groupBy={groupBy} onGroupByChange={setGroupBy} />
       )}
 
       <NoteModal />
@@ -131,98 +153,108 @@ export default function ContactsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
+const commonStyles = {
+  flex1Background: {
     flex: 1,
-    backgroundColor: '#F2F2F7',
+    backgroundColor: COLORS.background,
   },
+  sectionPadding: {
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm,
+  },
+  bottomBorder: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLORS.border,
+  },
+  boldText: {
+    fontWeight: '600' as const,
+    color: COLORS.black,
+  },
+  rowCenter: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+  },
+};
+
+const styles = StyleSheet.create({
+  container: commonStyles.flex1Background,
   list: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.white,
   },
   listContent: {
-    paddingBottom: 20,
+    paddingBottom: SPACING.xl,
   },
   sectionHeader: {
-    backgroundColor: '#F2F2F7',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    backgroundColor: COLORS.background,
+    ...commonStyles.sectionPadding,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#C6C6C8',
+    borderTopColor: COLORS.border,
   },
   sectionHeaderText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
+    ...commonStyles.boldText,
   },
   emptyContainer: {
-    flex: 1,
+    ...commonStyles.flex1Background,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 32,
-    backgroundColor: '#F2F2F7',
+    paddingHorizontal: SPACING.xxl,
   },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: '600',
-    color: '#000',
-    marginTop: 16,
-    marginBottom: 8,
+    ...commonStyles.boldText,
+    marginTop: SPACING.lg,
+    marginBottom: SPACING.sm,
   },
   emptyText: {
     fontSize: 16,
-    color: '#8E8E93',
+    color: COLORS.secondary,
     textAlign: 'center',
     lineHeight: 22,
   },
   searchContainer: {
-    backgroundColor: '#F2F2F7',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#C6C6C8',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    backgroundColor: COLORS.background,
+    ...commonStyles.sectionPadding,
+    ...commonStyles.bottomBorder,
   },
   searchInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    ...commonStyles.rowCenter,
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    gap: 8,
+    paddingVertical: SPACING.sm,
+    backgroundColor: COLORS.white,
+    borderRadius: SPACING.md,
+    gap: SPACING.sm,
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: '#333',
+    color: COLORS.text,
   },
   tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#F2F2F7',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#C6C6C8',
+    ...commonStyles.rowCenter,
+    backgroundColor: COLORS.background,
+    ...commonStyles.sectionPadding,
+    ...commonStyles.bottomBorder,
   },
   tab: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    ...commonStyles.rowCenter,
     justifyContent: 'center',
-    paddingVertical: 10,
-    gap: 6,
-    borderRadius: 8,
+    paddingVertical: SPACING.md,
+    gap: SPACING.xs,
+    borderRadius: SPACING.sm,
   },
   activeTab: {
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.white,
   },
   tabText: {
     fontSize: 15,
     fontWeight: '500',
-    color: '#8E8E93',
+    color: COLORS.secondary,
   },
   activeTabText: {
-    color: '#007AFF',
+    color: COLORS.primary,
     fontWeight: '600',
   },
 });

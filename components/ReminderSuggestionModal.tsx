@@ -1,18 +1,27 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Modal,
+  TouchableOpacity,
+  ScrollView,
+  TextInput,
+  Alert,
+} from 'react-native';
 import { X, Clock, Calendar, Bell, CheckCircle, Edit3 } from 'lucide-react-native';
 import { useContacts } from '@/hooks/contacts-store';
 import { DetectedDateTime } from '@/types/contact';
 
 export default function ReminderSuggestionModal() {
-  const { 
-    showReminderSuggestionModal, 
-    detectedDateTimes, 
+  const {
+    showReminderSuggestionModal,
+    detectedDateTimes,
     currentNoteForReminder,
     createReminderFromDetection,
-    closeReminderSuggestionModal 
+    closeReminderSuggestionModal,
   } = useContacts();
-  
+
   const [selectedDetections, setSelectedDetections] = useState<Set<number>>(new Set());
   const [customTitles, setCustomTitles] = useState<{ [key: number]: string }>({});
   const [editingTitle, setEditingTitle] = useState<number | null>(null);
@@ -36,7 +45,10 @@ export default function ReminderSuggestionModal() {
 
   const handleCreateReminders = () => {
     if (selectedDetections.size === 0) {
-      Alert.alert('No Reminders Selected', 'Please select at least one date/time to create reminders.');
+      Alert.alert(
+        'No Reminders Selected',
+        'Please select at least one date/time to create reminders.'
+      );
       return;
     }
 
@@ -69,26 +81,13 @@ export default function ReminderSuggestionModal() {
     } else if (isTomorrow) {
       return `Tomorrow at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
     } else {
-      return date.toLocaleDateString([], { 
-        weekday: 'short', 
-        month: 'short', 
+      return date.toLocaleDateString([], {
+        weekday: 'short',
+        month: 'short',
         day: 'numeric',
         hour: '2-digit',
-        minute: '2-digit'
+        minute: '2-digit',
       });
-    }
-  };
-
-  const getTypeIcon = (type: DetectedDateTime['type']) => {
-    switch (type) {
-      case 'time':
-        return <Clock size={16} color="#007AFF" />;
-      case 'date':
-        return <Calendar size={16} color="#34C759" />;
-      case 'datetime':
-        return <Bell size={16} color="#FF9500" />;
-      default:
-        return <Calendar size={16} color="#666" />;
     }
   };
 
@@ -116,14 +115,17 @@ export default function ReminderSuggestionModal() {
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.noteInfo}>
-            <Text style={styles.noteInfoTitle}>From call with {currentNoteForReminder.contactName}</Text>
+            <Text style={styles.noteInfoTitle}>
+              From call with {currentNoteForReminder.contactName}
+            </Text>
             <Text style={styles.noteInfoText} numberOfLines={2}>
               &ldquo;{currentNoteForReminder.note}&rdquo;
             </Text>
           </View>
 
           <Text style={styles.sectionTitle}>
-            Found {detectedDateTimes.length} time{detectedDateTimes.length > 1 ? 's' : ''} in your note:
+            Found {detectedDateTimes.length} time{detectedDateTimes.length > 1 ? 's' : ''} in your
+            note:
           </Text>
 
           <View style={styles.detectionsList}>
@@ -132,14 +134,11 @@ export default function ReminderSuggestionModal() {
               const isEditing = editingTitle === index;
               const customTitle = customTitles[index];
               const defaultTitle = `Follow up: ${detection.originalText}`;
-              
+
               return (
                 <TouchableOpacity
                   key={index}
-                  style={[
-                    styles.detectionCard,
-                    isSelected && styles.selectedDetectionCard
-                  ]}
+                  style={[styles.detectionCard, isSelected && styles.selectedDetectionCard]}
                   onPress={() => handleToggleDetection(index)}
                   activeOpacity={0.7}
                 >
@@ -147,15 +146,13 @@ export default function ReminderSuggestionModal() {
                     <View style={styles.detectionInfo}>
                       <View style={styles.detectionTypeContainer}>
                         <Clock size={16} color="#007AFF" />
-                        <Text style={styles.detectionType}>
-                          Time detected
-                        </Text>
+                        <Text style={styles.detectionType}>Time detected</Text>
                       </View>
                       <Text style={styles.detectionOriginal}>
                         &ldquo;{detection.originalText}&rdquo;
                       </Text>
                     </View>
-                    
+
                     <View style={styles.selectionIndicator}>
                       {isSelected ? (
                         <CheckCircle size={24} color="#007AFF" />
@@ -169,7 +166,7 @@ export default function ReminderSuggestionModal() {
                     <Text style={styles.suggestedDate}>
                       {formatDetectedDate(detection.suggestedDate)}
                     </Text>
-                    
+
                     {isSelected && (
                       <View style={styles.titleSection}>
                         <View style={styles.titleHeader}>
@@ -181,20 +178,18 @@ export default function ReminderSuggestionModal() {
                             <Edit3 size={14} color="#007AFF" />
                           </TouchableOpacity>
                         </View>
-                        
+
                         {isEditing ? (
                           <TextInput
                             style={styles.titleInput}
                             value={customTitle || defaultTitle}
-                            onChangeText={(text) => handleTitleChange(index, text)}
+                            onChangeText={text => handleTitleChange(index, text)}
                             onBlur={() => setEditingTitle(null)}
                             autoFocus
                             placeholder="Enter reminder title"
                           />
                         ) : (
-                          <Text style={styles.titlePreview}>
-                            {customTitle || defaultTitle}
-                          </Text>
+                          <Text style={styles.titlePreview}>{customTitle || defaultTitle}</Text>
                         )}
                       </View>
                     )}
@@ -216,20 +211,23 @@ export default function ReminderSuggestionModal() {
           <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
             <Text style={styles.skipButtonText}>Skip</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={[
-              styles.createReminderButton, 
-              selectedDetections.size === 0 && styles.createReminderButtonDisabled
-            ]} 
+              styles.createReminderButton,
+              selectedDetections.size === 0 && styles.createReminderButtonDisabled,
+            ]}
             onPress={handleCreateReminders}
             disabled={selectedDetections.size === 0}
           >
-            <Text style={[
-              styles.createReminderButtonText,
-              selectedDetections.size === 0 && styles.createReminderButtonTextDisabled
-            ]}>
-              Create {selectedDetections.size > 0 ? selectedDetections.size : ''} Reminder{selectedDetections.size !== 1 ? 's' : ''}
+            <Text
+              style={[
+                styles.createReminderButtonText,
+                selectedDetections.size === 0 && styles.createReminderButtonTextDisabled,
+              ]}
+            >
+              Create {selectedDetections.size > 0 ? selectedDetections.size : ''} Reminder
+              {selectedDetections.size !== 1 ? 's' : ''}
             </Text>
           </TouchableOpacity>
         </View>

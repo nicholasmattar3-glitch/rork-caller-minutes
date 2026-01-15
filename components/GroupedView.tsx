@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, ReactNode, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { ChevronDown, ChevronRight, Calendar, Clock, Package, Bell } from 'lucide-react-native';
 import { Reminder, Order } from '@/types/contact';
@@ -16,13 +16,19 @@ interface GroupedItem {
 interface GroupedViewProps {
   items: (Reminder | Order)[];
   groupBy: GroupByOption;
-  renderItem: (item: Reminder | Order) => React.ReactNode;
+  renderItem: (item: Reminder | Order) => ReactNode;
   emptyMessage?: string;
   itemType: 'reminder' | 'order';
 }
 
-export default function GroupedView({ items, groupBy, renderItem, emptyMessage, itemType }: GroupedViewProps) {
-  const [expandedGroups, setExpandedGroups] = React.useState<Set<string>>(new Set());
+export default function GroupedView({
+  items,
+  groupBy,
+  renderItem,
+  emptyMessage,
+  itemType,
+}: GroupedViewProps) {
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
   const toggleGroup = (groupId: string) => {
     setExpandedGroups(prev => {
@@ -58,7 +64,7 @@ export default function GroupedView({ items, groupBy, renderItem, emptyMessage, 
       let groupTitle: string;
 
       switch (groupBy) {
-        case 'day':
+        case 'day': {
           groupKey = date.toDateString();
           const today = new Date();
           const yesterday = new Date(today);
@@ -73,38 +79,42 @@ export default function GroupedView({ items, groupBy, renderItem, emptyMessage, 
           } else if (date.toDateString() === tomorrow.toDateString()) {
             groupTitle = 'Tomorrow';
           } else {
-            groupTitle = date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+            groupTitle = date.toLocaleDateString('en-US', {
+              weekday: 'long',
+              month: 'short',
+              day: 'numeric',
+            });
           }
           break;
-
-        case 'week':
+        }
+        case 'week': {
           const weekStart = new Date(date);
           weekStart.setDate(date.getDate() - date.getDay());
           const weekEnd = new Date(weekStart);
           weekEnd.setDate(weekStart.getDate() + 6);
           groupKey = `${weekStart.toDateString()}-${weekEnd.toDateString()}`;
-          
+
           const currentWeekStart = new Date(now);
           currentWeekStart.setDate(now.getDate() - now.getDay());
-          
+
           if (weekStart.toDateString() === currentWeekStart.toDateString()) {
             groupTitle = 'This Week';
           } else {
             groupTitle = `Week of ${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
           }
           break;
-
-        case 'month':
+        }
+        case 'month': {
           groupKey = `${date.getFullYear()}-${date.getMonth()}`;
           const currentMonth = `${now.getFullYear()}-${now.getMonth()}`;
-          
+
           if (groupKey === currentMonth) {
             groupTitle = 'This Month';
           } else {
             groupTitle = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
           }
           break;
-
+        }
         case 'year':
           groupKey = date.getFullYear().toString();
           groupTitle = date.getFullYear().toString();
@@ -121,7 +131,7 @@ export default function GroupedView({ items, groupBy, renderItem, emptyMessage, 
           title: groupTitle,
           date: date,
           items: [],
-          type: 'time-based'
+          type: 'time-based',
         });
       }
 
@@ -129,15 +139,25 @@ export default function GroupedView({ items, groupBy, renderItem, emptyMessage, 
     });
 
     // Sort groups by date
-    const sortedGroups = Array.from(groups.values()).sort((a, b) => 
-      b.date.getTime() - a.date.getTime()
+    const sortedGroups = Array.from(groups.values()).sort(
+      (a, b) => b.date.getTime() - a.date.getTime()
     );
 
     // Sort items within each group
     sortedGroups.forEach(group => {
       group.items.sort((a, b) => {
-        const dateA = 'dueDate' in a ? new Date(a.dueDate) : (a.reminderDate ? new Date(a.reminderDate) : new Date(a.createdAt));
-        const dateB = 'dueDate' in b ? new Date(b.dueDate) : (b.reminderDate ? new Date(b.reminderDate) : new Date(b.createdAt));
+        const dateA =
+          'dueDate' in a
+            ? new Date(a.dueDate)
+            : a.reminderDate
+              ? new Date(a.reminderDate)
+              : new Date(a.createdAt);
+        const dateB =
+          'dueDate' in b
+            ? new Date(b.dueDate)
+            : b.reminderDate
+              ? new Date(b.reminderDate)
+              : new Date(b.createdAt);
         return dateB.getTime() - dateA.getTime();
       });
     });
@@ -178,10 +198,7 @@ export default function GroupedView({ items, groupBy, renderItem, emptyMessage, 
 
         return (
           <View key={group.id} style={styles.groupContainer}>
-            <TouchableOpacity
-              style={styles.groupHeader}
-              onPress={() => toggleGroup(group.id)}
-            >
+            <TouchableOpacity style={styles.groupHeader} onPress={() => toggleGroup(group.id)}>
               <View style={styles.groupHeaderLeft}>
                 {isExpanded ? (
                   <ChevronDown size={20} color="#666" />

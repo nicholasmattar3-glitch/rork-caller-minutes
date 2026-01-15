@@ -51,26 +51,25 @@ export default function CallGroupManager({
   const [draggedNote, setDraggedNote] = useState<CallNote | null>(null);
   const dragAnimation = useRef(new Animated.ValueXY()).current;
 
-  const salesRunFolders = useMemo(() => 
-    folders.filter(f => f.type === 'sales-run'),
-    [folders]
-  );
+  const salesRunFolders = useMemo(() => folders.filter(f => f.type === 'sales-run'), [folders]);
 
   const groupedNotes = useMemo(() => {
     const groups: CallGroup[] = [];
 
     if (groupBy === 'none') {
-      return [{
-        id: 'all',
-        title: 'All Calls',
-        notes: notes,
-        type: 'time-based' as const,
-      }];
+      return [
+        {
+          id: 'all',
+          title: 'All Calls',
+          notes: notes,
+          type: 'time-based' as const,
+        },
+      ];
     }
 
     if (groupBy === 'folder') {
       const ungrouped: CallNote[] = [];
-      
+
       folders.forEach(folder => {
         const folderNotes = notes.filter(n => n.folderId === folder.id);
         if (folderNotes.length > 0) {
@@ -104,7 +103,7 @@ export default function CallGroupManager({
 
     // For time-based grouping, first group by time period, then by contact within each period
     const notesByTimePeriod = new Map<string, CallNote[]>();
-    
+
     notes.forEach(note => {
       const date = new Date(note.callStartTime);
       let key: string;
@@ -113,33 +112,34 @@ export default function CallGroupManager({
       switch (groupBy) {
         case 'day':
           key = date.toDateString();
-          title = date.toLocaleDateString('en-US', { 
-            weekday: 'long', 
-            month: 'long', 
-            day: 'numeric', 
-            year: 'numeric' 
+          title = date.toLocaleDateString('en-US', {
+            weekday: 'long',
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric',
           });
           break;
-        case 'week':
+        case 'week': {
           const weekStart = new Date(date);
           weekStart.setDate(date.getDate() - date.getDay());
           const weekEnd = new Date(weekStart);
           weekEnd.setDate(weekStart.getDate() + 6);
           key = `${weekStart.toDateString()}-${weekEnd.toDateString()}`;
-          title = `Week of ${weekStart.toLocaleDateString('en-US', { 
-            month: 'short', 
-            day: 'numeric' 
-          })} - ${weekEnd.toLocaleDateString('en-US', { 
-            month: 'short', 
+          title = `Week of ${weekStart.toLocaleDateString('en-US', {
+            month: 'short',
             day: 'numeric',
-            year: 'numeric'
+          })} - ${weekEnd.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
           })}`;
           break;
+        }
         case 'month':
           key = `${date.getFullYear()}-${date.getMonth()}`;
-          title = date.toLocaleDateString('en-US', { 
-            month: 'long', 
-            year: 'numeric' 
+          title = date.toLocaleDateString('en-US', {
+            month: 'long',
+            year: 'numeric',
           });
           break;
         case 'year':
@@ -161,7 +161,7 @@ export default function CallGroupManager({
     notesByTimePeriod.forEach((notesInPeriod, key) => {
       // Group notes by contact within this time period
       const notesByContact = new Map<string, CallNote[]>();
-      
+
       notesInPeriod.forEach(note => {
         const contactKey = note.contactName;
         if (!notesByContact.has(contactKey)) {
@@ -176,8 +176,8 @@ export default function CallGroupManager({
         contactGroups.push({
           id: `${key}-${contactName}`,
           title: contactName,
-          notes: contactNotes.sort((a, b) => 
-            new Date(b.callStartTime).getTime() - new Date(a.callStartTime).getTime()
+          notes: contactNotes.sort(
+            (a, b) => new Date(b.callStartTime).getTime() - new Date(a.callStartTime).getTime()
           ),
           type: 'contact-based',
           contactName,
@@ -195,8 +195,8 @@ export default function CallGroupManager({
       groups.push({
         id: key,
         title: title || key,
-        notes: notesInPeriod.sort((a, b) => 
-          new Date(b.callStartTime).getTime() - new Date(a.callStartTime).getTime()
+        notes: notesInPeriod.sort(
+          (a, b) => new Date(b.callStartTime).getTime() - new Date(a.callStartTime).getTime()
         ),
         type: 'time-based',
         date: notesInPeriod[0].callStartTime,
@@ -291,20 +291,19 @@ export default function CallGroupManager({
     return PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
-      
+
       onPanResponderGrant: () => {
         setDraggedNote(note);
       },
-      
-      onPanResponderMove: Animated.event(
-        [null, { dx: dragAnimation.x, dy: dragAnimation.y }],
-        { useNativeDriver: false }
-      ),
-      
+
+      onPanResponderMove: Animated.event([null, { dx: dragAnimation.x, dy: dragAnimation.y }], {
+        useNativeDriver: false,
+      }),
+
       onPanResponderRelease: (_, gestureState) => {
         // Check if dropped on a folder
         // This is simplified - in production you'd calculate actual drop zones
-        const dropFolder = salesRunFolders.find(folder => {
+        const dropFolder = salesRunFolders.find(() => {
           // Simplified drop detection
           return Math.abs(gestureState.moveY) < 100;
         });
@@ -320,7 +319,7 @@ export default function CallGroupManager({
           toValue: { x: 0, y: 0 },
           useNativeDriver: false,
         }).start();
-        
+
         setDraggedNote(null);
       },
     });
@@ -355,7 +354,8 @@ export default function CallGroupManager({
           <View style={styles.noteDetailItem}>
             <Clock size={12} color="#8E8E93" />
             <Text style={styles.noteDetailText}>
-              {Math.floor(note.callDuration / 60)}:{(note.callDuration % 60).toString().padStart(2, '0')}
+              {Math.floor(note.callDuration / 60)}:
+              {(note.callDuration % 60).toString().padStart(2, '0')}
             </Text>
           </View>
         </View>
@@ -376,10 +376,7 @@ export default function CallGroupManager({
         {...panResponder.panHandlers}
         style={[
           isBeingDragged && {
-            transform: [
-              { translateX: dragAnimation.x },
-              { translateY: dragAnimation.y },
-            ],
+            transform: [{ translateX: dragAnimation.x }, { translateY: dragAnimation.y }],
           },
         ]}
       >
@@ -397,10 +394,7 @@ export default function CallGroupManager({
             {(['none', 'day', 'week', 'month', 'year', 'folder'] as GroupByOption[]).map(option => (
               <TouchableOpacity
                 key={option}
-                style={[
-                  styles.groupByOption,
-                  groupBy === option && styles.groupByOptionActive,
-                ]}
+                style={[styles.groupByOption, groupBy === option && styles.groupByOptionActive]}
                 onPress={() => onGroupByChange(option)}
               >
                 <Text
@@ -425,7 +419,11 @@ export default function CallGroupManager({
       </View>
 
       {groupBy === 'folder' && salesRunFolders.length > 0 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.salesRunContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.salesRunContainer}
+        >
           {salesRunFolders.map(folder => (
             <View key={folder.id} style={[styles.salesRunFolder, { borderColor: folder.color }]}>
               <View style={styles.salesRunHeader}>
@@ -451,7 +449,7 @@ export default function CallGroupManager({
       <ScrollView style={styles.groupsList} showsVerticalScrollIndicator={false}>
         {groupedNotes.map(group => {
           const isExpanded = expandedGroups.has(group.id);
-          
+
           return (
             <View key={group.id} style={styles.group}>
               <TouchableOpacity
@@ -469,7 +467,12 @@ export default function CallGroupManager({
                     <View
                       style={[
                         styles.folderIndicator,
-                        { backgroundColor: folders.find(f => f.id === group.folderId)?.color || COLORS?.primary || '#007AFF' },
+                        {
+                          backgroundColor:
+                            folders.find(f => f.id === group.folderId)?.color ||
+                            COLORS?.primary ||
+                            '#007AFF',
+                        },
                       ]}
                     />
                   )}
@@ -480,44 +483,40 @@ export default function CallGroupManager({
 
               {isExpanded && (
                 <View style={styles.groupContent}>
-                  {group.type === 'time-based' && group.subGroups ? (
-                    // Render contact-based subgroups for time periods
-                    group.subGroups.map(subGroup => {
-                      const subGroupExpanded = expandedGroups.has(subGroup.id);
-                      return (
-                        <View key={subGroup.id} style={styles.subGroup}>
-                          <TouchableOpacity
-                            style={styles.subGroupHeader}
-                            onPress={() => toggleGroup(subGroup.id)}
-                            activeOpacity={0.7}
-                          >
-                            <View style={styles.subGroupHeaderLeft}>
-                              {subGroupExpanded ? (
-                                <ChevronDown size={16} color="#666" />
-                              ) : (
-                                <ChevronRight size={16} color="#666" />
-                              )}
-                              <Text style={styles.subGroupTitle}>{subGroup.title}</Text>
-                            </View>
-                            <Text style={styles.subGroupCount}>{subGroup.notes.length}</Text>
-                          </TouchableOpacity>
-                          
-                          {subGroupExpanded && (
-                            <View style={styles.subGroupContent}>
-                              {subGroup.notes.map(note => (
-                                <View key={note.id}>{renderNote(note)}</View>
-                              ))}
-                            </View>
-                          )}
-                        </View>
-                      );
-                    })
-                  ) : (
-                    // Render notes directly for folder-based or simple grouping
-                    group.notes.map(note => (
-                      <View key={note.id}>{renderNote(note)}</View>
-                    ))
-                  )}
+                  {group.type === 'time-based' && group.subGroups
+                    ? // Render contact-based subgroups for time periods
+                      group.subGroups.map(subGroup => {
+                        const subGroupExpanded = expandedGroups.has(subGroup.id);
+                        return (
+                          <View key={subGroup.id} style={styles.subGroup}>
+                            <TouchableOpacity
+                              style={styles.subGroupHeader}
+                              onPress={() => toggleGroup(subGroup.id)}
+                              activeOpacity={0.7}
+                            >
+                              <View style={styles.subGroupHeaderLeft}>
+                                {subGroupExpanded ? (
+                                  <ChevronDown size={16} color="#666" />
+                                ) : (
+                                  <ChevronRight size={16} color="#666" />
+                                )}
+                                <Text style={styles.subGroupTitle}>{subGroup.title}</Text>
+                              </View>
+                              <Text style={styles.subGroupCount}>{subGroup.notes.length}</Text>
+                            </TouchableOpacity>
+
+                            {subGroupExpanded && (
+                              <View style={styles.subGroupContent}>
+                                {subGroup.notes.map(note => (
+                                  <View key={note.id}>{renderNote(note)}</View>
+                                ))}
+                              </View>
+                            )}
+                          </View>
+                        );
+                      })
+                    : // Render notes directly for folder-based or simple grouping
+                      group.notes.map(note => <View key={note.id}>{renderNote(note)}</View>)}
                 </View>
               )}
             </View>
@@ -559,7 +558,11 @@ export default function CallGroupManager({
             />
 
             <Text style={styles.colorLabel}>Choose Color:</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.colorPicker}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.colorPicker}
+            >
               {Object.values(COLORS || {}).map((color: string) => (
                 <TouchableOpacity
                   key={color}
@@ -590,9 +593,7 @@ export default function CallGroupManager({
                 style={[styles.modalButton, styles.saveButton]}
                 onPress={handleSaveFolder}
               >
-                <Text style={styles.modalButtonText}>
-                  {editingFolder ? 'Update' : 'Create'}
-                </Text>
+                <Text style={styles.modalButtonText}>{editingFolder ? 'Update' : 'Create'}</Text>
               </TouchableOpacity>
             </View>
           </View>

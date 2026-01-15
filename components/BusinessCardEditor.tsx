@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,16 +12,7 @@ import {
   Animated,
   ScrollView,
 } from 'react-native';
-import { 
-  X, 
-  Check, 
-  ZoomIn, 
-  ZoomOut, 
-  RotateCw,
-  Move,
-  Maximize2,
-  Grid3x3
-} from 'lucide-react-native';
+import { X, Check, ZoomIn, ZoomOut, RotateCw, Move, Maximize2, Grid3x3 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 
@@ -41,25 +32,53 @@ export default function BusinessCardEditor({
   imageUri,
   onSave,
   onCancel,
-  contactName
+  contactName,
 }: BusinessCardEditorProps) {
   const [editingImage, setEditingImage] = useState<string | null>(imageUri);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
-  const [containerSize, setContainerSize] = useState({ width: screenWidth, height: screenHeight * 0.6 });
-  
+  const [containerSize, setContainerSize] = useState({
+    width: screenWidth,
+    height: screenHeight * 0.6,
+  });
+
   // Transform states
   const scale = useRef(new Animated.Value(1)).current;
   const translateX = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(0)).current;
   const rotation = useRef(new Animated.Value(0)).current;
-  
+
   const [currentScale, setCurrentScale] = useState(1);
   const [currentTranslateX, setCurrentTranslateX] = useState(0);
   const [currentTranslateY, setCurrentTranslateY] = useState(0);
   const [currentRotation, setCurrentRotation] = useState(0);
-  
+
   const [showGrid, setShowGrid] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
+
+  const centerImage = useCallback(
+    (imgWidth: number, imgHeight: number) => {
+      // Calculate scale to fit the card frame
+      const cardWidth = containerSize.width * 0.8;
+      const cardHeight = cardWidth / CARD_ASPECT_RATIO;
+
+      const scaleX = cardWidth / imgWidth;
+      const scaleY = cardHeight / imgHeight;
+      const optimalScale = Math.max(scaleX, scaleY) * 1.2; // Slightly larger for cropping flexibility
+
+      setCurrentScale(optimalScale);
+      setCurrentTranslateX(0);
+      setCurrentTranslateY(0);
+      setCurrentRotation(0);
+
+      Animated.parallel([
+        Animated.spring(scale, { toValue: optimalScale, useNativeDriver: true }),
+        Animated.spring(translateX, { toValue: 0, useNativeDriver: true }),
+        Animated.spring(translateY, { toValue: 0, useNativeDriver: true }),
+        Animated.spring(rotation, { toValue: 0, useNativeDriver: true }),
+      ]).start();
+    },
+    [containerSize.width, rotation, scale, translateX, translateY]
+  );
 
   useEffect(() => {
     if (imageUri) {
@@ -69,35 +88,13 @@ export default function BusinessCardEditor({
         centerImage(width, height);
       });
     }
-  }, [imageUri]);
-
-  const centerImage = (imgWidth: number, imgHeight: number) => {
-    // Calculate scale to fit the card frame
-    const cardWidth = containerSize.width * 0.8;
-    const cardHeight = cardWidth / CARD_ASPECT_RATIO;
-    
-    const scaleX = cardWidth / imgWidth;
-    const scaleY = cardHeight / imgHeight;
-    const optimalScale = Math.max(scaleX, scaleY) * 1.2; // Slightly larger for cropping flexibility
-    
-    setCurrentScale(optimalScale);
-    setCurrentTranslateX(0);
-    setCurrentTranslateY(0);
-    setCurrentRotation(0);
-    
-    Animated.parallel([
-      Animated.spring(scale, { toValue: optimalScale, useNativeDriver: true }),
-      Animated.spring(translateX, { toValue: 0, useNativeDriver: true }),
-      Animated.spring(translateY, { toValue: 0, useNativeDriver: true }),
-      Animated.spring(rotation, { toValue: 0, useNativeDriver: true }),
-    ]).start();
-  };
+  }, [centerImage, imageUri]);
 
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
-      
+
       onPanResponderGrant: () => {
         setIsDragging(true);
         translateX.setOffset(currentTranslateX);
@@ -105,20 +102,19 @@ export default function BusinessCardEditor({
         translateX.setValue(0);
         translateY.setValue(0);
       },
-      
-      onPanResponderMove: Animated.event(
-        [null, { dx: translateX, dy: translateY }],
-        { useNativeDriver: false }
-      ),
-      
+
+      onPanResponderMove: Animated.event([null, { dx: translateX, dy: translateY }], {
+        useNativeDriver: false,
+      }),
+
       onPanResponderRelease: (_, gestureState) => {
         setIsDragging(false);
         translateX.flattenOffset();
         translateY.flattenOffset();
-        
+
         const newX = currentTranslateX + gestureState.dx;
         const newY = currentTranslateY + gestureState.dy;
-        
+
         setCurrentTranslateX(newX);
         setCurrentTranslateY(newY);
       },
@@ -128,27 +124,27 @@ export default function BusinessCardEditor({
   const handleZoomIn = () => {
     const newScale = Math.min(currentScale * 1.2, 5);
     setCurrentScale(newScale);
-    Animated.spring(scale, { 
-      toValue: newScale, 
-      useNativeDriver: true 
+    Animated.spring(scale, {
+      toValue: newScale,
+      useNativeDriver: true,
     }).start();
   };
 
   const handleZoomOut = () => {
     const newScale = Math.max(currentScale * 0.8, 0.5);
     setCurrentScale(newScale);
-    Animated.spring(scale, { 
-      toValue: newScale, 
-      useNativeDriver: true 
+    Animated.spring(scale, {
+      toValue: newScale,
+      useNativeDriver: true,
     }).start();
   };
 
   const handleRotate = () => {
     const newRotation = currentRotation + 90;
     setCurrentRotation(newRotation);
-    Animated.spring(rotation, { 
-      toValue: newRotation, 
-      useNativeDriver: true 
+    Animated.spring(rotation, {
+      toValue: newRotation,
+      useNativeDriver: true,
     }).start();
   };
 
@@ -165,60 +161,74 @@ export default function BusinessCardEditor({
       console.log('Starting image save process...');
       console.log('Image size:', imageSize);
       console.log('Container size:', containerSize);
-      console.log('Current transforms:', { currentScale, currentTranslateX, currentTranslateY, currentRotation });
-      
+      console.log('Current transforms:', {
+        currentScale,
+        currentTranslateX,
+        currentTranslateY,
+        currentRotation,
+      });
+
       // Calculate the crop area based on the business card frame
       const cardWidth = containerSize.width * 0.8;
       const cardHeight = cardWidth / CARD_ASPECT_RATIO;
-      
+
       console.log('Card dimensions:', { cardWidth, cardHeight });
-      
+
       // Get the actual image dimensions
       const actualImageWidth = imageSize.width;
       const actualImageHeight = imageSize.height;
-      
+
       // Calculate scale factor between displayed image and actual image
       const displayScale = Math.min(cardWidth / actualImageWidth, cardHeight / actualImageHeight);
-      
+
       // Calculate crop coordinates in actual image space
-      const scaleFactor = 1 / currentScale;
       const centerX = actualImageWidth / 2;
       const centerY = actualImageHeight / 2;
-      
+
       // Convert translate values to actual image coordinates
       const translateXInImageSpace = -currentTranslateX / (displayScale * currentScale);
       const translateYInImageSpace = -currentTranslateY / (displayScale * currentScale);
-      
+
       // Calculate crop dimensions in actual image space
       const cropWidthInImageSpace = cardWidth / (displayScale * currentScale);
       const cropHeightInImageSpace = cardHeight / (displayScale * currentScale);
-      
+
       // Calculate crop origin (top-left corner)
-      const cropX = Math.max(0, Math.min(actualImageWidth - cropWidthInImageSpace, 
-        centerX + translateXInImageSpace - cropWidthInImageSpace / 2));
-      const cropY = Math.max(0, Math.min(actualImageHeight - cropHeightInImageSpace,
-        centerY + translateYInImageSpace - cropHeightInImageSpace / 2));
-      
+      const cropX = Math.max(
+        0,
+        Math.min(
+          actualImageWidth - cropWidthInImageSpace,
+          centerX + translateXInImageSpace - cropWidthInImageSpace / 2
+        )
+      );
+      const cropY = Math.max(
+        0,
+        Math.min(
+          actualImageHeight - cropHeightInImageSpace,
+          centerY + translateYInImageSpace - cropHeightInImageSpace / 2
+        )
+      );
+
       // Ensure crop dimensions don't exceed image bounds
       const finalCropWidth = Math.min(cropWidthInImageSpace, actualImageWidth - cropX);
       const finalCropHeight = Math.min(cropHeightInImageSpace, actualImageHeight - cropY);
-      
+
       console.log('Crop parameters:', {
         cropX,
         cropY,
         finalCropWidth,
         finalCropHeight,
-        rotation: currentRotation
+        rotation: currentRotation,
       });
 
       // Build manipulation actions
       const actions: any[] = [];
-      
+
       // Apply rotation first if needed
       if (currentRotation !== 0) {
         actions.push({ rotate: currentRotation });
       }
-      
+
       // Apply crop
       actions.push({
         crop: {
@@ -228,22 +238,18 @@ export default function BusinessCardEditor({
           height: Math.round(finalCropHeight),
         },
       });
-      
+
       // Resize to standard business card size
       actions.push({ resize: { width: 800 } });
-      
+
       console.log('Applying manipulations:', actions);
 
       // Apply transformations and crop
-      const manipResult = await ImageManipulator.manipulateAsync(
-        editingImage,
-        actions,
-        { 
-          compress: 0.9, 
-          format: ImageManipulator.SaveFormat.JPEG,
-          base64: false
-        }
-      );
+      const manipResult = await ImageManipulator.manipulateAsync(editingImage, actions, {
+        compress: 0.9,
+        format: ImageManipulator.SaveFormat.JPEG,
+        base64: false,
+      });
 
       console.log('Manipulation result:', manipResult);
       onSave(manipResult.uri);
@@ -276,11 +282,7 @@ export default function BusinessCardEditor({
   };
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="fullScreen"
-    >
+    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
@@ -296,9 +298,9 @@ export default function BusinessCardEditor({
         </View>
 
         {/* Image Editor */}
-        <View 
+        <View
           style={styles.editorContainer}
-          onLayout={(e) => {
+          onLayout={e => {
             setContainerSize({
               width: e.nativeEvent.layout.width,
               height: e.nativeEvent.layout.height,
@@ -307,13 +309,15 @@ export default function BusinessCardEditor({
         >
           {/* Card Frame */}
           <View style={styles.cardFrameContainer}>
-            <View style={[
-              styles.cardFrame,
-              {
-                width: containerSize.width * 0.8,
-                height: (containerSize.width * 0.8) / CARD_ASPECT_RATIO,
-              }
-            ]}>
+            <View
+              style={[
+                styles.cardFrame,
+                {
+                  width: containerSize.width * 0.8,
+                  height: (containerSize.width * 0.8) / CARD_ASPECT_RATIO,
+                },
+              ]}
+            >
               {/* Grid Overlay */}
               {showGrid && (
                 <View style={styles.gridOverlay} pointerEvents="none">
@@ -347,10 +351,12 @@ export default function BusinessCardEditor({
                           { translateX },
                           { translateY },
                           { scale },
-                          { rotate: rotation.interpolate({
-                            inputRange: [0, 360],
-                            outputRange: ['0deg', '360deg']
-                          }) },
+                          {
+                            rotate: rotation.interpolate({
+                              inputRange: [0, 360],
+                              outputRange: ['0deg', '360deg'],
+                            }),
+                          },
                         ],
                       },
                     ]}
@@ -395,30 +401,30 @@ export default function BusinessCardEditor({
               <ZoomIn size={20} color="#007AFF" />
               <Text style={styles.controlText}>Zoom In</Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity style={styles.controlButton} onPress={handleZoomOut}>
               <ZoomOut size={20} color="#007AFF" />
               <Text style={styles.controlText}>Zoom Out</Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity style={styles.controlButton} onPress={handleRotate}>
               <RotateCw size={20} color="#007AFF" />
               <Text style={styles.controlText}>Rotate</Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity style={styles.controlButton} onPress={handleAutoCenter}>
               <Maximize2 size={20} color="#007AFF" />
               <Text style={styles.controlText}>Auto Fit</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.controlButton, showGrid && styles.controlButtonActive]} 
+
+            <TouchableOpacity
+              style={[styles.controlButton, showGrid && styles.controlButtonActive]}
               onPress={() => setShowGrid(!showGrid)}
             >
-              <Grid3x3 size={20} color={showGrid ? "#fff" : "#007AFF"} />
+              <Grid3x3 size={20} color={showGrid ? '#fff' : '#007AFF'} />
               <Text style={[styles.controlText, showGrid && styles.controlTextActive]}>Grid</Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity style={styles.controlButton} onPress={pickNewImage}>
               <Move size={20} color="#007AFF" />
               <Text style={styles.controlText}>Change</Text>

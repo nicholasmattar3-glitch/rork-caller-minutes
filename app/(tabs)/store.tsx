@@ -1,13 +1,52 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, TextInput, SafeAreaView, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
+import React, { useState, useMemo, ReactNode, ReactElement, cloneElement } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Alert,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
-import { ShoppingBag, FileText, Plus, Download, Package, DollarSign, User, Calendar, Clock, CheckCircle, X, Minus, Search, ChevronDown, Edit3, Trash2, Upload } from 'lucide-react-native';
+import {
+  ShoppingBag,
+  FileText,
+  Plus,
+  Package,
+  DollarSign,
+  User,
+  Calendar,
+  Clock,
+  CheckCircle,
+  X,
+  Minus,
+  Search,
+  ChevronDown,
+  Edit3,
+  Trash2,
+  Upload,
+} from 'lucide-react-native';
 import { useContacts } from '@/hooks/contacts-store';
 import { OrderItem, Order, Product } from '@/types/contact';
 import ProductCatalogModal from '@/components/ProductCatalogModal';
+import Button from '@/components/Button';
+import { parseTimeFromDescription } from '@/utils/timeParser';
 
 export default function StoreScreen() {
-  const { contacts, orders, addOrder, updateOrder, deleteOrder, productCatalogs, deleteProductCatalog } = useContacts();
+  const {
+    contacts,
+    orders,
+    addOrder,
+    updateOrder,
+    deleteOrder,
+    productCatalogs,
+    deleteProductCatalog,
+  } = useContacts();
   const [showOrderModal, setShowOrderModal] = useState<boolean>(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [selectedContactId, setSelectedContactId] = useState<string>('');
@@ -31,6 +70,13 @@ export default function StoreScreen() {
   const pendingOrders = orders.filter(order => order.status === 'pending').length;
   const completedOrders = orders.filter(order => order.status === 'delivered').length;
   const totalRevenue = orders.reduce((sum, order) => sum + order.totalAmount, 0);
+
+  const stats = [
+    { icon: <ShoppingBag />, title: 'Total Orders', value: totalOrders, color: '#007AFF' },
+    { icon: <Clock />, title: 'Pending', value: pendingOrders, color: '#FF9500' },
+    { icon: <CheckCircle />, title: 'Completed', value: completedOrders, color: '#34C759' },
+    { icon: <DollarSign />, title: 'Revenue', value: `$${totalRevenue.toFixed(2)}`, color: '#5856D6' },
+  ];
 
   const resetOrderForm = () => {
     setSelectedContactId('');
@@ -94,20 +140,21 @@ export default function StoreScreen() {
       removeItemFromOrder(itemId);
       return;
     }
-    setOrderItems(orderItems.map(item => 
-      item.id === itemId ? { ...item, quantity: newQuantity } : item
-    ));
+    setOrderItems(
+      orderItems.map(item => (item.id === itemId ? { ...item, quantity: newQuantity } : item))
+    );
   };
 
   const calculateTotal = () => {
-    return orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    return orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   };
 
   const filteredContacts = useMemo(() => {
     if (!contactSearch.trim()) return contacts;
-    return contacts.filter(contact => 
-      contact.name.toLowerCase().includes(contactSearch.toLowerCase()) ||
-      contact.phoneNumber.toLowerCase().includes(contactSearch.toLowerCase())
+    return contacts.filter(
+      contact =>
+        contact.name.toLowerCase().includes(contactSearch.toLowerCase()) ||
+        contact.phoneNumber.toLowerCase().includes(contactSearch.toLowerCase())
     );
   }, [contacts, contactSearch]);
 
@@ -158,12 +205,12 @@ export default function StoreScreen() {
   // Handle product name input and show suggestions
   const handleProductNameChange = (text: string) => {
     setNewItemName(text);
-    
+
     if (text.trim().length > 0) {
-      const suggestions = getAllProducts.filter(product => 
-        product.name.toLowerCase().includes(text.toLowerCase())
-      ).slice(0, 5); // Limit to 5 suggestions
-      
+      const suggestions = getAllProducts
+        .filter(product => product.name.toLowerCase().includes(text.toLowerCase()))
+        .slice(0, 5); // Limit to 5 suggestions
+
       setProductSuggestions(suggestions);
       setShowProductSuggestions(suggestions.length > 0);
     } else {
@@ -204,42 +251,17 @@ export default function StoreScreen() {
     let reminderDate = orderReminderDate;
     let reminderTime = orderReminderTime;
     let showReminderPopup = false;
-    
+
     if (orderNotes && !reminderDate) {
-      const timePatterns = [
-        /\b(\d{1,2})\s*[:.]\s*(\d{2})\s*(am|pm)?\b/i,
-        /\b(\d{1,2})\s*(am|pm)\b/i,
-        /\bat\s+(\d{1,2})\s*[:.]?\s*(\d{0,2})\s*(am|pm)?\b/i,
-        /\b(1[0-2]|0?[1-9]):([0-5]\d)\s*(am|pm|AM|PM)\b/i,
-        /\b([01]?\d|2[0-3]):([0-5]\d)\b/i,
-      ];
-      
-      for (const pattern of timePatterns) {
-        const match = orderNotes.match(pattern);
-        if (match) {
-          let hours = parseInt(match[1]);
-          let minutes = match[2] ? parseInt(match[2]) : 0;
-          const meridiem = match[3] || match[match.length - 1];
-          
-          if (meridiem) {
-            const isPM = meridiem.toLowerCase() === 'pm';
-            if (isPM && hours < 12) hours += 12;
-            if (!isPM && hours === 12) hours = 0;
-          }
-          
-          const date = new Date();
-          date.setHours(hours, minutes, 0, 0);
-          
-          // If the time has already passed today, set it for tomorrow
-          if (date.getTime() <= new Date().getTime()) {
-            date.setDate(date.getDate() + 1);
-          }
-          
-          reminderDate = date;
-          reminderTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-          showReminderPopup = true;
-          break;
-        }
+      const detectedTime = parseTimeFromDescription(orderNotes, new Date(), true);
+      if (detectedTime) {
+        reminderDate = detectedTime;
+        reminderTime = detectedTime.toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        });
+        showReminderPopup = true;
       }
     }
 
@@ -255,9 +277,9 @@ export default function StoreScreen() {
           notes: orderNotes.trim() || undefined,
           reminderDate: reminderDate || undefined,
           reminderTime: reminderTime || undefined,
-        }
+        },
       });
-      
+
       if (showReminderPopup && reminderDate) {
         Alert.alert(
           'Reminder Set!',
@@ -279,7 +301,7 @@ export default function StoreScreen() {
         reminderDate: reminderDate || undefined,
         reminderTime: reminderTime || undefined,
       });
-      
+
       if (showReminderPopup && reminderDate) {
         Alert.alert(
           'Order Created with Reminder!',
@@ -301,28 +323,46 @@ export default function StoreScreen() {
 
   const getStatusColor = (status: Order['status']) => {
     switch (status) {
-      case 'pending': return '#FF9500';
-      case 'confirmed': return '#007AFF';
-      case 'shipped': return '#5856D6';
-      case 'delivered': return '#34C759';
-      case 'cancelled': return '#FF3B30';
-      default: return '#8E8E93';
+      case 'pending':
+        return '#FF9500';
+      case 'confirmed':
+        return '#007AFF';
+      case 'shipped':
+        return '#5856D6';
+      case 'delivered':
+        return '#34C759';
+      case 'cancelled':
+        return '#FF3B30';
+      default:
+        return '#8E8E93';
     }
   };
 
   const getStatusText = (status: Order['status']) => {
     switch (status) {
-      case 'pending': return 'Pending';
-      case 'confirmed': return 'Confirmed';
-      case 'shipped': return 'Shipped';
-      case 'delivered': return 'Delivered';
-      case 'cancelled': return 'Cancelled';
-      default: return 'Unknown';
+      case 'pending':
+        return 'Pending';
+      case 'confirmed':
+        return 'Confirmed';
+      case 'shipped':
+        return 'Shipped';
+      case 'delivered':
+        return 'Delivered';
+      case 'cancelled':
+        return 'Cancelled';
+      default:
+        return 'Unknown';
     }
   };
 
-  const StatCard = ({ icon, title, value, subtitle, color = '#007AFF' }: {
-    icon: React.ReactNode;
+  const StatCard = ({
+    icon,
+    title,
+    value,
+    subtitle,
+    color = '#007AFF',
+  }: {
+    icon: ReactNode;
     title: string;
     value: string | number;
     subtitle?: string;
@@ -330,7 +370,7 @@ export default function StoreScreen() {
   }) => (
     <View style={styles.statCard}>
       <View style={[styles.iconContainer, { backgroundColor: color + '15' }]}>
-        {React.cloneElement(icon as React.ReactElement, { color: color, size: 24 } as any)}
+        {cloneElement(icon as ReactElement, { color: color, size: 24 } as any)}
       </View>
       <View style={styles.statContent}>
         <Text style={styles.statValue}>{value}</Text>
@@ -341,40 +381,22 @@ export default function StoreScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <Stack.Screen options={{ title: 'Store' }} />
-      
+
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Store Overview</Text>
           <View style={styles.statsGrid}>
-            <StatCard
-              icon={<ShoppingBag />}
-              title="Total Orders"
-              value={totalOrders}
-              color="#007AFF"
-            />
-            <StatCard
-              icon={<Clock />}
-              title="Pending"
-              value={pendingOrders}
-              color="#FF9500"
-            />
-          </View>
-          
-          <View style={styles.statsGrid}>
-            <StatCard
-              icon={<CheckCircle />}
-              title="Completed"
-              value={completedOrders}
-              color="#34C759"
-            />
-            <StatCard
-              icon={<DollarSign />}
-              title="Revenue"
-              value={`$${totalRevenue.toFixed(2)}`}
-              color="#5856D6"
-            />
+            {stats.map((stat, index) => (
+              <StatCard
+                key={index}
+                icon={stat.icon}
+                title={stat.title}
+                value={stat.value}
+                color={stat.color}
+              />
+            ))}
           </View>
         </View>
 
@@ -386,7 +408,7 @@ export default function StoreScreen() {
                 <FileText size={24} color="#FF6B35" />
                 <Text style={styles.catalogTitle}>Product Lists</Text>
               </View>
-              <TouchableOpacity 
+              <Button
                 style={styles.addCatalogButton}
                 onPress={() => {
                   setEditingCatalog(null);
@@ -396,9 +418,9 @@ export default function StoreScreen() {
               >
                 <Upload size={16} color="#fff" />
                 <Text style={styles.addCatalogButtonText}>Upload PDF</Text>
-              </TouchableOpacity>
+              </Button>
             </View>
-            
+
             {productCatalogs.length === 0 ? (
               <View style={styles.emptyCatalogs}>
                 <Package size={48} color="#ccc" />
@@ -410,17 +432,15 @@ export default function StoreScreen() {
             ) : (
               <>
                 <View style={styles.catalogGrid}>
-                  {productCatalogs.map((catalog) => (
+                  {productCatalogs.map(catalog => (
                     <View key={catalog.id} style={styles.catalogCard}>
                       <View style={styles.catalogIconContainer}>
                         <FileText size={32} color="#FF6B35" />
                       </View>
                       <Text style={styles.catalogCardTitle}>{catalog.name}</Text>
-                      <Text style={styles.catalogSubtitle}>
-                        {catalog.products.length} products
-                      </Text>
+                      <Text style={styles.catalogSubtitle}>{catalog.products.length} products</Text>
                       <View style={styles.catalogActions}>
-                        <TouchableOpacity 
+                        <Button
                           style={styles.catalogActionButton}
                           onPress={() => {
                             setEditingCatalog(catalog);
@@ -429,8 +449,8 @@ export default function StoreScreen() {
                           }}
                         >
                           <Edit3 size={14} color="#007AFF" />
-                        </TouchableOpacity>
-                        <TouchableOpacity 
+                        </Button>
+                        <Button
                           style={styles.catalogActionButton}
                           onPress={() => {
                             Alert.alert(
@@ -438,25 +458,26 @@ export default function StoreScreen() {
                               'Are you sure you want to delete this catalog?',
                               [
                                 { text: 'Cancel', style: 'cancel' },
-                                { 
-                                  text: 'Delete', 
+                                {
+                                  text: 'Delete',
                                   style: 'destructive',
-                                  onPress: () => deleteProductCatalog(catalog.id)
-                                }
+                                  onPress: () => deleteProductCatalog(catalog.id),
+                                },
                               ]
                             );
                           }}
                         >
                           <Trash2 size={14} color="#FF3B30" />
-                        </TouchableOpacity>
+                        </Button>
                       </View>
                     </View>
                   ))}
                 </View>
-                
+
                 <View style={styles.catalogInfo}>
                   <Text style={styles.catalogInfoText}>
-                    Your product catalogs are saved and can be used when creating orders. Upload PDFs to automatically extract products and prices.
+                    Your product catalogs are saved and can be used when creating orders. Upload
+                    PDFs to automatically extract products and prices.
                   </Text>
                 </View>
               </>
@@ -467,7 +488,7 @@ export default function StoreScreen() {
         <View style={styles.section}>
           <View style={styles.ordersHeader}>
             <Text style={styles.sectionTitle}>Orders</Text>
-            <TouchableOpacity 
+            <Button
               style={styles.createOrderButton}
               onPress={() => {
                 if (contacts.length === 0) {
@@ -479,9 +500,9 @@ export default function StoreScreen() {
             >
               <Plus size={16} color="#fff" />
               <Text style={styles.createOrderButtonText}>New Order</Text>
-            </TouchableOpacity>
+            </Button>
           </View>
-          
+
           {orders.length === 0 ? (
             <View style={styles.emptyOrders}>
               <Package size={48} color="#ccc" />
@@ -494,7 +515,7 @@ export default function StoreScreen() {
             <View style={styles.ordersList}>
               {orders
                 .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                .map((order) => (
+                .map(order => (
                   <View key={order.id} style={styles.orderCard}>
                     <View style={styles.orderHeader}>
                       <View style={styles.orderInfo}>
@@ -505,15 +526,22 @@ export default function StoreScreen() {
                         </View>
                       </View>
                       <View style={styles.orderStatus}>
-                        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(order.status) + '15' }]}>
-                          <Text style={[styles.statusText, { color: getStatusColor(order.status) }]}>
+                        <View
+                          style={[
+                            styles.statusBadge,
+                            { backgroundColor: getStatusColor(order.status) + '15' },
+                          ]}
+                        >
+                          <Text
+                            style={[styles.statusText, { color: getStatusColor(order.status) }]}
+                          >
                             {getStatusText(order.status)}
                           </Text>
                         </View>
                         <Text style={styles.orderAmount}>${order.totalAmount.toFixed(2)}</Text>
                       </View>
                     </View>
-                    
+
                     <View style={styles.orderItems}>
                       {order.items.map((item, index) => (
                         <Text key={index} style={styles.orderItem}>
@@ -521,21 +549,19 @@ export default function StoreScreen() {
                         </Text>
                       ))}
                     </View>
-                    
-                    {order.notes && (
-                      <Text style={styles.orderNotes}>{order.notes}</Text>
-                    )}
-                    
+
+                    {order.notes && <Text style={styles.orderNotes}>{order.notes}</Text>}
+
                     {order.reminderDate && (
                       <View style={styles.orderReminder}>
                         <Clock size={14} color="#007AFF" />
                         <Text style={styles.orderReminderText}>
-                          Reminder: {new Date(order.reminderDate).toLocaleDateString()} 
+                          Reminder: {new Date(order.reminderDate).toLocaleDateString()}
                           {order.reminderTime && ` at ${order.reminderTime}`}
                         </Text>
                       </View>
                     )}
-                    
+
                     <View style={styles.orderFooter}>
                       <View style={styles.orderDate}>
                         <Calendar size={12} color="#8E8E93" />
@@ -543,41 +569,41 @@ export default function StoreScreen() {
                           {new Date(order.createdAt).toLocaleDateString()}
                         </Text>
                       </View>
-                      
+
                       <View style={styles.orderActions}>
-                        <TouchableOpacity 
+                        <Button
                           style={[styles.actionButton, { backgroundColor: '#007AFF' }]}
                           onPress={() => handleEditOrder(order)}
                         >
                           <Edit3 size={14} color="#fff" />
                           <Text style={styles.actionButtonText}>Edit</Text>
-                        </TouchableOpacity>
-                        
+                        </Button>
+
                         {order.status === 'pending' && (
-                          <TouchableOpacity 
+                          <Button
                             style={[styles.actionButton, { backgroundColor: '#FF9500' }]}
                             onPress={() => updateOrderStatus(order.id, 'confirmed')}
                           >
                             <Text style={styles.actionButtonText}>Confirm</Text>
-                          </TouchableOpacity>
+                          </Button>
                         )}
                         {order.status === 'confirmed' && (
-                          <TouchableOpacity 
+                          <Button
                             style={[styles.actionButton, { backgroundColor: '#5856D6' }]}
                             onPress={() => updateOrderStatus(order.id, 'shipped')}
                           >
                             <Text style={styles.actionButtonText}>Ship</Text>
-                          </TouchableOpacity>
+                          </Button>
                         )}
                         {order.status === 'shipped' && (
-                          <TouchableOpacity 
+                          <Button
                             style={[styles.actionButton, { backgroundColor: '#34C759' }]}
                             onPress={() => updateOrderStatus(order.id, 'delivered')}
                           >
                             <Text style={styles.actionButtonText}>Deliver</Text>
-                          </TouchableOpacity>
+                          </Button>
                         )}
-                        <TouchableOpacity 
+                        <Button
                           style={[styles.actionButton, { backgroundColor: '#FF3B30' }]}
                           onPress={() => {
                             Alert.alert(
@@ -585,13 +611,17 @@ export default function StoreScreen() {
                               'Are you sure you want to delete this order?',
                               [
                                 { text: 'Cancel', style: 'cancel' },
-                                { text: 'Delete', style: 'destructive', onPress: () => deleteOrder(order.id) }
+                                {
+                                  text: 'Delete',
+                                  style: 'destructive',
+                                  onPress: () => deleteOrder(order.id),
+                                },
                               ]
                             );
                           }}
                         >
                           <Trash2 size={14} color="#fff" />
-                        </TouchableOpacity>
+                        </Button>
                       </View>
                     </View>
                   </View>
@@ -601,19 +631,17 @@ export default function StoreScreen() {
         </View>
       </ScrollView>
 
-      <Modal
-        visible={showOrderModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
-      >
-        <KeyboardAvoidingView 
+      <Modal visible={showOrderModal} animationType="slide" presentationStyle="pageSheet">
+        <KeyboardAvoidingView
           style={styles.modalContainer}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
         >
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{editingOrder ? 'Edit Order' : 'Create New Order'}</Text>
-            <TouchableOpacity 
+            <Text style={styles.modalTitle}>
+              {editingOrder ? 'Edit Order' : 'Create New Order'}
+            </Text>
+            <Button
               style={styles.closeButton}
               onPress={() => {
                 setShowOrderModal(false);
@@ -621,19 +649,20 @@ export default function StoreScreen() {
               }}
             >
               <X size={24} color="#000" />
-            </TouchableOpacity>
+            </Button>
           </View>
-          
-          <ScrollView 
-            style={styles.modalContent} 
+
+          <ScrollView
+            style={styles.modalContent}
             contentContainerStyle={styles.modalContentContainer}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="interactive">
+            keyboardDismissMode="interactive"
+          >
             <View style={styles.formSection}>
               <Text style={styles.formLabel}>Select Contact</Text>
               <View style={styles.contactSearchContainer}>
-                <TouchableOpacity 
+                <Button
                   style={styles.contactSearchInput}
                   onPress={() => setShowContactDropdown(!showContactDropdown)}
                 >
@@ -643,7 +672,7 @@ export default function StoreScreen() {
                       style={styles.searchInput}
                       placeholder="Search contacts..."
                       value={contactSearch}
-                      onChangeText={(text) => {
+                      onChangeText={text => {
                         setContactSearch(text);
                         setShowContactDropdown(true);
                         if (!text.trim()) {
@@ -654,39 +683,46 @@ export default function StoreScreen() {
                     />
                     <ChevronDown size={16} color="#666" />
                   </View>
-                </TouchableOpacity>
-                
+                </Button>
+
                 {showContactDropdown && (
                   <View style={styles.contactDropdown}>
                     <ScrollView style={styles.contactDropdownScroll} nestedScrollEnabled>
                       {filteredContacts.length > 0 ? (
-                        filteredContacts.map((contact) => (
-                          <TouchableOpacity
+                        filteredContacts.map(contact => (
+                          <Button
                             key={contact.id}
                             style={[
                               styles.contactDropdownItem,
-                              selectedContactId === contact.id && styles.selectedContactDropdownItem
+                              selectedContactId === contact.id &&
+                                styles.selectedContactDropdownItem,
                             ]}
                             onPress={() => selectContact(contact)}
                           >
                             <View style={styles.contactDropdownItemContent}>
-                              <Text style={[
-                                styles.contactDropdownItemName,
-                                selectedContactId === contact.id && styles.selectedContactDropdownItemText
-                              ]}>
+                              <Text
+                                style={[
+                                  styles.contactDropdownItemName,
+                                  selectedContactId === contact.id &&
+                                    styles.selectedContactDropdownItemText,
+                                ]}
+                              >
                                 {contact.name}
                               </Text>
-                              <Text style={[
-                                styles.contactDropdownItemPhone,
-                                selectedContactId === contact.id && styles.selectedContactDropdownItemText
-                              ]}>
+                              <Text
+                                style={[
+                                  styles.contactDropdownItemPhone,
+                                  selectedContactId === contact.id &&
+                                    styles.selectedContactDropdownItemText,
+                                ]}
+                              >
                                 {contact.phoneNumber}
                               </Text>
                             </View>
                             {selectedContactId === contact.id && (
                               <CheckCircle size={16} color="#007AFF" />
                             )}
-                          </TouchableOpacity>
+                          </Button>
                         ))
                       ) : (
                         <View style={styles.noContactsFound}>
@@ -697,7 +733,7 @@ export default function StoreScreen() {
                   </View>
                 )}
               </View>
-              
+
               {selectedContact && (
                 <View style={styles.selectedContactDisplay}>
                   <Text style={styles.selectedContactLabel}>Order for:</Text>
@@ -709,12 +745,12 @@ export default function StoreScreen() {
                 </View>
               )}
             </View>
-            
+
             <View style={styles.formSection}>
               <View style={styles.formLabelRow}>
                 <Text style={styles.formLabel}>Add Items</Text>
                 {productCatalogs.length > 0 && (
-                  <TouchableOpacity
+                  <Button
                     style={styles.fromCatalogButton}
                     onPress={() => {
                       setSelectingProductsForOrder(true);
@@ -723,10 +759,10 @@ export default function StoreScreen() {
                   >
                     <FileText size={14} color="#007AFF" />
                     <Text style={styles.fromCatalogButtonText}>From Catalog</Text>
-                  </TouchableOpacity>
+                  </Button>
                 )}
               </View>
-              
+
               <View style={styles.addItemForm}>
                 <View style={styles.productNameContainer}>
                   <TextInput
@@ -743,8 +779,8 @@ export default function StoreScreen() {
                   {showProductSuggestions && productSuggestions.length > 0 && (
                     <View style={styles.productSuggestionsDropdown}>
                       <ScrollView style={styles.productSuggestionsScroll} nestedScrollEnabled>
-                        {productSuggestions.map((product) => (
-                          <TouchableOpacity
+                        {productSuggestions.map(product => (
+                          <Button
                             key={product.id}
                             style={styles.productSuggestionItem}
                             onPress={() => selectProductSuggestion(product)}
@@ -761,7 +797,7 @@ export default function StoreScreen() {
                               </Text>
                             </View>
                             <Package size={16} color="#666" />
-                          </TouchableOpacity>
+                          </Button>
                         ))}
                       </ScrollView>
                     </View>
@@ -790,16 +826,16 @@ export default function StoreScreen() {
                     keyboardType="number-pad"
                   />
                 </View>
-                <TouchableOpacity style={styles.addItemButton} onPress={addItemToOrder}>
+                <Button style={styles.addItemButton} onPress={addItemToOrder}>
                   <Plus size={16} color="#fff" />
                   <Text style={styles.addItemButtonText}>Add Item</Text>
-                </TouchableOpacity>
+                </Button>
               </View>
-              
+
               {orderItems.length > 0 && (
                 <View style={styles.orderItemsList}>
                   <Text style={styles.orderItemsTitle}>Order Items:</Text>
-                  {orderItems.map((item) => (
+                  {orderItems.map(item => (
                     <View key={item.id} style={styles.orderItemRow}>
                       <View style={styles.orderItemInfo}>
                         <Text style={styles.orderItemName}>{item.name}</Text>
@@ -807,40 +843,41 @@ export default function StoreScreen() {
                           <Text style={styles.orderItemDescription}>{item.description}</Text>
                         )}
                         <Text style={styles.orderItemPrice}>
-                          ${item.price.toFixed(2)} x {item.quantity} = ${(item.price * item.quantity).toFixed(2)}
+                          ${item.price.toFixed(2)} x {item.quantity} = $
+                          {(item.price * item.quantity).toFixed(2)}
                         </Text>
                       </View>
                       <View style={styles.orderItemActions}>
-                        <TouchableOpacity 
+                        <Button
                           style={styles.quantityButton}
                           onPress={() => updateItemQuantity(item.id, item.quantity - 1)}
                         >
                           <Minus size={16} color="#007AFF" />
-                        </TouchableOpacity>
+                        </Button>
                         <Text style={styles.quantityText}>{item.quantity}</Text>
-                        <TouchableOpacity 
+                        <Button
                           style={styles.quantityButton}
                           onPress={() => updateItemQuantity(item.id, item.quantity + 1)}
                         >
                           <Plus size={16} color="#007AFF" />
-                        </TouchableOpacity>
-                        <TouchableOpacity 
+                        </Button>
+                        <Button
                           style={styles.removeItemButton}
                           onPress={() => removeItemFromOrder(item.id)}
                         >
                           <X size={16} color="#FF3B30" />
-                        </TouchableOpacity>
+                        </Button>
                       </View>
                     </View>
                   ))}
-                  
+
                   <View style={styles.orderTotal}>
                     <Text style={styles.orderTotalText}>Total: ${calculateTotal().toFixed(2)}</Text>
                   </View>
                 </View>
               )}
             </View>
-            
+
             <View style={[styles.formSection, { marginBottom: 100 }]}>
               <Text style={styles.formLabel}>Order Notes (Optional)</Text>
               <TextInput
@@ -859,55 +896,28 @@ export default function StoreScreen() {
                   }, 100);
                 }}
               />
-              {orderNotes && (() => {
-                const timePatterns = [
-                  /\b(\d{1,2})\s*[:.]\s*(\d{2})\s*(am|pm)?\b/i,
-                  /\b(\d{1,2})\s*(am|pm)\b/i,
-                  /\bat\s+(\d{1,2})\s*[:.]?\s*(\d{0,2})\s*(am|pm)?\b/i,
-                  /\b(1[0-2]|0?[1-9]):([0-5]\d)\s*(am|pm|AM|PM)\b/i,
-                  /\b([01]?\d|2[0-3]):([0-5]\d)\b/i,
-                ];
-                
-                let detectedTime = null;
-                for (const pattern of timePatterns) {
-                  const match = orderNotes.match(pattern);
-                  if (match) {
-                    let hours = parseInt(match[1]);
-                    let minutes = match[2] ? parseInt(match[2]) : 0;
-                    const meridiem = match[3] || match[match.length - 1];
-                    
-                    if (meridiem) {
-                      const isPM = meridiem.toLowerCase() === 'pm';
-                      if (isPM && hours < 12) hours += 12;
-                      if (!isPM && hours === 12) hours = 0;
-                    }
-                    
-                    const date = new Date();
-                    date.setHours(hours, minutes, 0, 0);
-                    
-                    if (date.getTime() <= new Date().getTime()) {
-                      date.setDate(date.getDate() + 1);
-                    }
-                    
-                    detectedTime = date;
-                    break;
-                  }
-                }
-                
-                return detectedTime ? (
-                  <View style={styles.timeDetected}>
-                    <Clock size={14} color="#007AFF" />
-                    <Text style={styles.timeDetectedText}>
-                      Reminder will be set for: {detectedTime.toLocaleDateString()} at {detectedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </Text>
-                  </View>
-                ) : null;
-              })()}
+              {orderNotes &&
+                (() => {
+                  const detectedTime = parseTimeFromDescription(orderNotes, new Date(), true);
+
+                  return detectedTime ? (
+                    <View style={styles.timeDetected}>
+                      <Clock size={14} color="#007AFF" />
+                      <Text style={styles.timeDetectedText}>
+                        Reminder will be set for: {detectedTime.toLocaleDateString()} at{' '}
+                        {detectedTime.toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </Text>
+                    </View>
+                  ) : null;
+                })()}
             </View>
           </ScrollView>
-          
+
           <View style={styles.modalFooter}>
-            <TouchableOpacity 
+            <Button
               style={styles.cancelButton}
               onPress={() => {
                 setShowOrderModal(false);
@@ -915,13 +925,12 @@ export default function StoreScreen() {
               }}
             >
               <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.createButton}
-              onPress={createOrder}
-            >
-              <Text style={styles.createButtonText}>{editingOrder ? 'Update Order' : 'Create Order'}</Text>
-            </TouchableOpacity>
+            </Button>
+            <Button style={styles.createButton} onPress={createOrder}>
+              <Text style={styles.createButtonText}>
+                {editingOrder ? 'Update Order' : 'Create Order'}
+              </Text>
+            </Button>
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -961,12 +970,14 @@ const styles = StyleSheet.create({
   },
   statsGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     paddingHorizontal: 16,
     gap: 12,
     marginBottom: 8,
   },
   statCard: {
-    flex: 1,
+    flexBasis: '48%',
+    minWidth: 160,
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,

@@ -19,9 +19,16 @@ interface FolderManagementModalProps {
 }
 
 const FOLDER_COLORS = [
-  '#007AFF', '#34C759', '#FF9500', '#5856D6',
-  '#FF3B30', '#00C7BE', '#AF52DE', '#FF2D92',
-  '#A2845E', '#8E8E93'
+  '#007AFF',
+  '#34C759',
+  '#FF9500',
+  '#5856D6',
+  '#FF3B30',
+  '#00C7BE',
+  '#AF52DE',
+  '#FF2D92',
+  '#A2845E',
+  '#8E8E93',
 ];
 
 export default function FolderManagementModal({ visible, onClose }: FolderManagementModalProps) {
@@ -105,7 +112,7 @@ export default function FolderManagementModal({ visible, onClose }: FolderManage
     <View style={styles.colorPicker}>
       <Text style={styles.colorPickerLabel}>Color</Text>
       <View style={styles.colorOptions}>
-        {FOLDER_COLORS.map((color) => (
+        {FOLDER_COLORS.map(color => (
           <TouchableOpacity
             key={color}
             style={[
@@ -137,7 +144,7 @@ export default function FolderManagementModal({ visible, onClose }: FolderManage
               <Text style={styles.formTitle}>
                 {editingFolder ? 'Edit Folder' : 'Add New Folder'}
               </Text>
-              
+
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Name</Text>
                 <TextInput
@@ -167,19 +174,14 @@ export default function FolderManagementModal({ visible, onClose }: FolderManage
               <ColorPicker />
 
               <View style={styles.formActions}>
-                <TouchableOpacity
-                  style={[styles.button, styles.cancelButton]}
-                  onPress={resetForm}
-                >
+                <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={resetForm}>
                   <Text style={styles.cancelButtonText}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.button, styles.saveButton]}
                   onPress={editingFolder ? handleUpdateFolder : handleAddFolder}
                 >
-                  <Text style={styles.saveButtonText}>
-                    {editingFolder ? 'Update' : 'Add'}
-                  </Text>
+                  <Text style={styles.saveButtonText}>{editingFolder ? 'Update' : 'Add'}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -187,10 +189,7 @@ export default function FolderManagementModal({ visible, onClose }: FolderManage
 
           {/* Add Folder Button */}
           {!showAddForm && (
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={() => setShowAddForm(true)}
-            >
+            <TouchableOpacity style={styles.addButton} onPress={() => setShowAddForm(true)}>
               <Plus size={20} color="#007AFF" />
               <Text style={styles.addButtonText}>Add New Folder</Text>
             </TouchableOpacity>
@@ -199,7 +198,7 @@ export default function FolderManagementModal({ visible, onClose }: FolderManage
           {/* Folders List */}
           <View style={styles.foldersList}>
             <Text style={styles.sectionTitle}>Folders ({folders.length})</Text>
-            {folders.map((folder) => (
+            {folders.map(folder => (
               <View key={folder.id} style={styles.folderItem}>
                 <View style={styles.folderInfo}>
                   <View style={styles.folderIcon}>
@@ -228,14 +227,12 @@ export default function FolderManagementModal({ visible, onClose }: FolderManage
                 </View>
               </View>
             ))}
-            
+
             {folders.length === 0 && (
               <View style={styles.emptyState}>
                 <Folder size={48} color="#ccc" />
                 <Text style={styles.emptyTitle}>No Folders Yet</Text>
-                <Text style={styles.emptyText}>
-                  Create folders to organize your call notes
-                </Text>
+                <Text style={styles.emptyText}>Create folders to organize your call notes</Text>
               </View>
             )}
           </View>

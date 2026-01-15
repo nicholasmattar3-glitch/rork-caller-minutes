@@ -1,6 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
-import { X, Save, Clock, Phone, Tag, Check, ChevronDown, ChevronUp, AlertCircle, Plus } from 'lucide-react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+} from 'react-native';
+import {
+  X,
+  Save,
+  Clock,
+  Phone,
+  Tag,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  AlertCircle,
+  Plus,
+} from 'lucide-react-native';
 import { useContacts } from '@/hooks/contacts-store';
 import { NoteStatus } from '@/types/contact';
 
@@ -11,7 +32,16 @@ interface TemplateSection {
 }
 
 export default function NoteModal() {
-  const { showNoteModal, currentCallContact, callStartTime, callEndTime, closeNoteModal, saveNote, noteTemplate, presetTags } = useContacts();
+  const {
+    showNoteModal,
+    currentCallContact,
+    callStartTime,
+    callEndTime,
+    closeNoteModal,
+    saveNote,
+    noteTemplate,
+    presetTags,
+  } = useContacts();
   const [selectedStatus, setSelectedStatus] = useState<NoteStatus>('follow-up');
   const [customStatus, setCustomStatus] = useState('');
   const [showStatusPicker, setShowStatusPicker] = useState(false);
@@ -27,12 +57,14 @@ export default function NoteModal() {
   useEffect(() => {
     if (showNoteModal && currentCallContact) {
       // Parse template into sections
-      const template = noteTemplate || 'Purpose of call:\n\nKey points discussed:\n\nAction items:\n\nNext steps:\n\nAdditional notes:';
+      const template =
+        noteTemplate ||
+        'Purpose of call:\n\nKey points discussed:\n\nAction items:\n\nNext steps:\n\nAdditional notes:';
       const lines = template.split('\n');
       const sections: TemplateSection[] = [];
-      
+
       let currentSection: TemplateSection | null = null;
-      
+
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
         if (line.endsWith(':')) {
@@ -45,16 +77,16 @@ export default function NoteModal() {
           currentSection = {
             id,
             label,
-            value: ''
+            value: '',
           };
         }
       }
-      
+
       // Add the last section
       if (currentSection) {
         sections.push(currentSection);
       }
-      
+
       // If no sections found, use defaults
       if (sections.length === 0) {
         sections.push(
@@ -65,7 +97,7 @@ export default function NoteModal() {
           { id: 'additional', label: 'Additional notes', value: '' }
         );
       }
-      
+
       setTemplateSections(sections);
       setExpandedSections(new Set()); // Start with all sections collapsed
       setSelectedStatus('follow-up');
@@ -79,7 +111,7 @@ export default function NoteModal() {
       setShowTagPicker(false);
     }
   }, [showNoteModal, currentCallContact, noteTemplate]);
-  
+
   const formatCallDuration = () => {
     if (!callStartTime || !callEndTime) return '0s';
     const duration = Math.floor((callEndTime.getTime() - callStartTime.getTime()) / 1000);
@@ -88,40 +120,43 @@ export default function NoteModal() {
     const seconds = duration % 60;
     return `${minutes}m ${seconds}s`;
   };
-  
+
   const formatCallTime = () => {
     if (!callStartTime) return '';
     return callStartTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
-  
+
   const formatCallDate = () => {
     if (!callStartTime) return '';
-    return callStartTime.toLocaleDateString([], { 
-      weekday: 'short', 
-      month: 'short', 
-      day: 'numeric' 
+    return callStartTime.toLocaleDateString([], {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
     });
   };
 
   const handleSave = () => {
     // Build the note text from sections with content
-    const header = `Call with ${currentCallContact?.name} - ${new Date().toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })}`;
-    
+    const header = `Call with ${currentCallContact?.name} - ${new Date().toLocaleDateString(
+      'en-US',
+      {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      }
+    )}`;
+
     let noteText = header + '\n\n';
-    
+
     // Only include sections that have actual content
     const sectionsWithContent = templateSections.filter(section => section.value.trim());
     sectionsWithContent.forEach(section => {
       noteText += `${section.label}:\n${section.value.trim()}\n\n`;
     });
-    
+
     if (noteText.trim() !== header.trim()) {
       const finalCustomStatus = selectedStatus === 'other' ? customStatus.trim() : undefined;
       saveNote(noteText.trim(), selectedStatus, finalCustomStatus, selectedPriority, tags);
@@ -129,7 +164,7 @@ export default function NoteModal() {
       // No content added, just close
       closeNoteModal();
     }
-    
+
     setTemplateSections([]);
     setSelectedStatus('follow-up');
     setCustomStatus('');
@@ -157,17 +192,13 @@ export default function NoteModal() {
     setSelectedPriority('medium');
     setTags([]);
   };
-  
 
-  
   const updateSectionValue = (id: string, value: string) => {
-    setTemplateSections(prev => 
-      prev.map(section => 
-        section.id === id ? { ...section, value } : section
-      )
+    setTemplateSections(prev =>
+      prev.map(section => (section.id === id ? { ...section, value } : section))
     );
   };
-  
+
   const toggleSectionExpanded = (id: string) => {
     setExpandedSections(prev => {
       const newSet = new Set(prev);
@@ -179,7 +210,7 @@ export default function NoteModal() {
       return newSet;
     });
   };
-  
+
   const addTag = () => {
     if (newTag.trim() && !tags.includes(newTag.trim())) {
       setTags([...tags, newTag.trim()]);
@@ -187,47 +218,51 @@ export default function NoteModal() {
       setShowTagInput(false);
     }
   };
-  
+
   const addPresetTag = (tag: string) => {
     if (!tags.includes(tag)) {
       setTags([...tags, tag]);
     }
     setShowTagPicker(false);
   };
-  
+
   const removeTag = (tagToRemove: string) => {
     setTags(tags.filter(tag => tag !== tagToRemove));
   };
-  
+
   const getPriorityColor = (priority: 'low' | 'medium' | 'high') => {
     switch (priority) {
-      case 'high': return '#FF3B30';
-      case 'medium': return '#FF9500';
-      case 'low': return '#34C759';
-      default: return '#FF9500';
+      case 'high':
+        return '#FF3B30';
+      case 'medium':
+        return '#FF9500';
+      case 'low':
+        return '#34C759';
+      default:
+        return '#FF9500';
     }
   };
-  
+
   const getPriorityLabel = (priority: 'low' | 'medium' | 'high') => {
     switch (priority) {
-      case 'high': return 'High Priority';
-      case 'medium': return 'Medium Priority';
-      case 'low': return 'Low Priority';
-      default: return 'Medium Priority';
+      case 'high':
+        return 'High Priority';
+      case 'medium':
+        return 'Medium Priority';
+      case 'low':
+        return 'Low Priority';
+      default:
+        return 'Medium Priority';
     }
   };
-  
+
   const hasContent = templateSections.some(s => s.value.trim());
 
   if (!showNoteModal || !currentCallContact) return null;
 
   return (
-    <Modal
-      visible={true}
-      animationType="slide"
-      presentationStyle="pageSheet"
-    >
-      <KeyboardAvoidingView 
+    <Modal visible={true} animationType="slide" presentationStyle="pageSheet">
+      <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
@@ -236,15 +271,15 @@ export default function NoteModal() {
           <TouchableOpacity onPress={handleClose}>
             <X size={24} color="#007AFF" />
           </TouchableOpacity>
-          
+
           <Text style={styles.title}>Call Note</Text>
-          
+
           <TouchableOpacity onPress={handleSave}>
             <Save size={24} color="#007AFF" />
           </TouchableOpacity>
         </View>
 
-        <ScrollView 
+        <ScrollView
           style={styles.content}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
@@ -252,7 +287,7 @@ export default function NoteModal() {
         >
           <Text style={styles.contactName}>{currentCallContact.name}</Text>
           <Text style={styles.contactPhone}>{currentCallContact.phoneNumber}</Text>
-          
+
           <View style={styles.callInfo}>
             <View style={styles.callInfoItem}>
               <Clock size={16} color="#666" />
@@ -262,32 +297,35 @@ export default function NoteModal() {
             </View>
             <View style={styles.callInfoItem}>
               <Phone size={16} color="#666" />
-              <Text style={styles.callInfoText}>
-                Duration: {formatCallDuration()}
-              </Text>
+              <Text style={styles.callInfoText}>Duration: {formatCallDuration()}</Text>
             </View>
           </View>
-          
+
           {/* Status Selection */}
           <View style={styles.statusSection}>
             <Text style={styles.statusLabel}>Call Status</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.statusSelector}
               onPress={() => setShowStatusPicker(!showStatusPicker)}
             >
               <Tag size={16} color="#007AFF" />
               <Text style={styles.statusText}>
-                {selectedStatus === 'other' && customStatus ? customStatus : 
-                 selectedStatus === 'follow-up' ? 'Follow-up' :
-                 selectedStatus === 'waiting-reply' ? 'Waiting Reply' :
-                 selectedStatus === 'closed' ? 'Closed' : 'Other'}
+                {selectedStatus === 'other' && customStatus
+                  ? customStatus
+                  : selectedStatus === 'follow-up'
+                    ? 'Follow-up'
+                    : selectedStatus === 'waiting-reply'
+                      ? 'Waiting Reply'
+                      : selectedStatus === 'closed'
+                        ? 'Closed'
+                        : 'Other'}
               </Text>
               <ChevronDown size={16} color="#666" />
             </TouchableOpacity>
-            
+
             {showStatusPicker && (
               <View style={styles.statusPicker}>
-                {(['follow-up', 'waiting-reply', 'closed', 'other'] as NoteStatus[]).map((status) => (
+                {(['follow-up', 'waiting-reply', 'closed', 'other'] as NoteStatus[]).map(status => (
                   <TouchableOpacity
                     key={status}
                     style={styles.statusOption}
@@ -298,15 +336,24 @@ export default function NoteModal() {
                       }
                     }}
                   >
-                    <Text style={[styles.statusOptionText, selectedStatus === status && styles.selectedStatusText]}>
-                      {status === 'follow-up' ? 'Follow-up' :
-                       status === 'waiting-reply' ? 'Waiting Reply' :
-                       status === 'closed' ? 'Closed' : 'Other'}
+                    <Text
+                      style={[
+                        styles.statusOptionText,
+                        selectedStatus === status && styles.selectedStatusText,
+                      ]}
+                    >
+                      {status === 'follow-up'
+                        ? 'Follow-up'
+                        : status === 'waiting-reply'
+                          ? 'Waiting Reply'
+                          : status === 'closed'
+                            ? 'Closed'
+                            : 'Other'}
                     </Text>
                     {selectedStatus === status && <Check size={16} color="#007AFF" />}
                   </TouchableOpacity>
                 ))}
-                
+
                 {selectedStatus === 'other' && (
                   <TextInput
                     style={styles.customStatusInput}
@@ -321,24 +368,22 @@ export default function NoteModal() {
               </View>
             )}
           </View>
-          
+
           {/* Priority Selection */}
           <View style={styles.statusSection}>
             <Text style={styles.statusLabel}>Priority</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.statusSelector}
               onPress={() => setShowPriorityPicker(!showPriorityPicker)}
             >
               <AlertCircle size={16} color={getPriorityColor(selectedPriority)} />
-              <Text style={styles.statusText}>
-                {getPriorityLabel(selectedPriority)}
-              </Text>
+              <Text style={styles.statusText}>{getPriorityLabel(selectedPriority)}</Text>
               <ChevronDown size={16} color="#666" />
             </TouchableOpacity>
-            
+
             {showPriorityPicker && (
               <View style={styles.statusPicker}>
-                {(['high', 'medium', 'low'] as const).map((priority) => (
+                {(['high', 'medium', 'low'] as const).map(priority => (
                   <TouchableOpacity
                     key={priority}
                     style={styles.statusOption}
@@ -349,7 +394,12 @@ export default function NoteModal() {
                   >
                     <View style={styles.priorityOptionContent}>
                       <AlertCircle size={16} color={getPriorityColor(priority)} />
-                      <Text style={[styles.statusOptionText, selectedPriority === priority && styles.selectedStatusText]}>
+                      <Text
+                        style={[
+                          styles.statusOptionText,
+                          selectedPriority === priority && styles.selectedStatusText,
+                        ]}
+                      >
                         {getPriorityLabel(priority)}
                       </Text>
                     </View>
@@ -359,12 +409,12 @@ export default function NoteModal() {
               </View>
             )}
           </View>
-          
+
           {/* Tags Section */}
           <View style={styles.statusSection}>
             <Text style={styles.statusLabel}>Tags</Text>
             <View style={styles.tagsContainer}>
-              {tags.map((tag) => (
+              {tags.map(tag => (
                 <View key={tag} style={styles.tag}>
                   <Text style={styles.tagText}>{tag}</Text>
                   <TouchableOpacity onPress={() => removeTag(tag)} style={styles.tagRemove}>
@@ -372,7 +422,7 @@ export default function NoteModal() {
                   </TouchableOpacity>
                 </View>
               ))}
-              
+
               {showTagInput ? (
                 <View style={styles.tagInputContainer}>
                   <TextInput
@@ -394,7 +444,7 @@ export default function NoteModal() {
                 </View>
               ) : (
                 <>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.addTagButton}
                     onPress={() => setShowTagPicker(!showTagPicker)}
                   >
@@ -402,8 +452,8 @@ export default function NoteModal() {
                     <Text style={styles.addTagText}>Add Tag</Text>
                     <ChevronDown size={16} color="#666" />
                   </TouchableOpacity>
-                  
-                  <TouchableOpacity 
+
+                  <TouchableOpacity
                     style={styles.customTagButton}
                     onPress={() => setShowTagInput(true)}
                   >
@@ -413,20 +463,22 @@ export default function NoteModal() {
                 </>
               )}
             </View>
-            
+
             {showTagPicker && (
               <View style={styles.tagPicker}>
                 <Text style={styles.tagPickerTitle}>Select from preset tags:</Text>
                 <View style={styles.presetTagsContainer}>
-                  {presetTags.filter(tag => !tags.includes(tag)).map((tag) => (
-                    <TouchableOpacity
-                      key={tag}
-                      style={styles.presetTagOption}
-                      onPress={() => addPresetTag(tag)}
-                    >
-                      <Text style={styles.presetTagText}>{tag}</Text>
-                    </TouchableOpacity>
-                  ))}
+                  {presetTags
+                    .filter(tag => !tags.includes(tag))
+                    .map(tag => (
+                      <TouchableOpacity
+                        key={tag}
+                        style={styles.presetTagOption}
+                        onPress={() => addPresetTag(tag)}
+                      >
+                        <Text style={styles.presetTagText}>{tag}</Text>
+                      </TouchableOpacity>
+                    ))}
                   {presetTags.filter(tag => !tags.includes(tag)).length === 0 && (
                     <Text style={styles.noTagsText}>All preset tags are already added</Text>
                   )}
@@ -434,29 +486,34 @@ export default function NoteModal() {
               </View>
             )}
           </View>
-          
+
           <Text style={styles.sectionTitle}>Call Notes</Text>
           <Text style={styles.sectionDescription}>
             Fill in the sections that apply to your call
           </Text>
-          
+
           {/* Template Sections */}
           <View style={styles.templateSections}>
             {templateSections.map((section, index) => (
-              <View key={section.id} style={[styles.templateSection, index === templateSections.length - 1 && styles.lastSection]}>
-                <TouchableOpacity 
+              <View
+                key={section.id}
+                style={[
+                  styles.templateSection,
+                  index === templateSections.length - 1 && styles.lastSection,
+                ]}
+              >
+                <TouchableOpacity
                   style={styles.sectionHeader}
                   onPress={() => toggleSectionExpanded(section.id)}
                 >
-                  <Text style={styles.sectionLabel}>
-                    {section.label}
-                  </Text>
-                  {expandedSections.has(section.id) ? 
-                    <ChevronUp size={20} color="#666" /> : 
+                  <Text style={styles.sectionLabel}>{section.label}</Text>
+                  {expandedSections.has(section.id) ? (
+                    <ChevronUp size={20} color="#666" />
+                  ) : (
                     <ChevronDown size={20} color="#666" />
-                  }
+                  )}
                 </TouchableOpacity>
-                
+
                 {expandedSections.has(section.id) && (
                   <View style={styles.sectionContent}>
                     <TextInput
@@ -466,7 +523,7 @@ export default function NoteModal() {
                       multiline
                       textAlignVertical="top"
                       value={section.value}
-                      onChangeText={(text) => updateSectionValue(section.id, text)}
+                      onChangeText={text => updateSectionValue(section.id, text)}
                     />
                   </View>
                 )}
@@ -479,13 +536,21 @@ export default function NoteModal() {
           <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
             <Text style={styles.skipButtonText}>Skip</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.saveButton, !hasContent && styles.saveButtonDisabled]} 
+
+          <TouchableOpacity
+            style={[styles.saveButton, !hasContent && styles.saveButtonDisabled]}
             onPress={handleSave}
-            disabled={!hasContent && (selectedStatus === 'other' && !customStatus.trim())}
+            disabled={!hasContent && selectedStatus === 'other' && !customStatus.trim()}
           >
-            <Text style={[styles.saveButtonText, (!hasContent && (selectedStatus === 'other' && !customStatus.trim())) && styles.saveButtonTextDisabled]}>
+            <Text
+              style={[
+                styles.saveButtonText,
+                !hasContent &&
+                  selectedStatus === 'other' &&
+                  !customStatus.trim() &&
+                  styles.saveButtonTextDisabled,
+              ]}
+            >
               Save Note
             </Text>
           </TouchableOpacity>

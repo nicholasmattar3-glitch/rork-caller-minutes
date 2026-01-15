@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+.expo/
+.expo-shared/
+web-build/
+
+# Native
+ios/
+android/
+
+# Misc
+.DS_Store
+*.log
+.vscode/
+.idea/
+coverage/
+
+# Lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml

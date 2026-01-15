@@ -36,28 +36,21 @@ export default function ActiveCallModal() {
   if (!activeCall) return null;
 
   return (
-    <Modal
-      visible={true}
-      animationType="fade"
-      statusBarTranslucent
-    >
-      <LinearGradient
-        colors={['#2d5a27', '#4a7c59']}
-        style={styles.container}
-      >
+    <Modal visible={true} animationType="fade" statusBarTranslucent>
+      <LinearGradient colors={['#2d5a27', '#4a7c59']} style={styles.container}>
         <View style={styles.content}>
           <Text style={styles.statusText}>Call in progress</Text>
-          
+
           <View style={styles.avatarContainer}>
             <View style={styles.avatar}>
               <User size={60} color="#fff" />
             </View>
           </View>
-          
+
           <Text style={styles.name}>{activeCall.contact.name}</Text>
           <Text style={styles.phone}>{activeCall.contact.phoneNumber}</Text>
           <Text style={styles.duration}>{formatDuration(callDuration)}</Text>
-          
+
           <View style={styles.actions}>
             <TouchableOpacity style={styles.endButton} onPress={handleEndCall}>
               <PhoneOff size={28} color="#fff" />

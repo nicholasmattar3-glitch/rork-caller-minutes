@@ -2,6 +2,8 @@
 
 # dependencies
 node_modules/
+.pnp
+.pnp.js
 
 # Expo
 .expo/
@@ -9,29 +11,97 @@ dist/
 web-build/
 expo-env.d.ts
 
-# Native
+# Native build folders
+ios/
+android/
+
+# Native files
 *.orig.*
 *.jks
 *.p8
 *.p12
 *.key
 *.mobileprovision
+*.keystore
+!debug.keystore
+
+# CocoaPods (if ios/ is tracked)
+ios/Pods/
+ios/build/
+ios/*.xcworkspace
+!ios/*.xcworkspace/contents.xcworkspacedata
+
+# Android (if android/ is tracked)
+android/app/build/
+android/build/
+android/.gradle
+android/app/release/
+android/local.properties
+android/.idea
+android/*.iml
 
 # Metro
 .metro-health-check*
 
-# debug
+# Debug
 npm-debug.*
 yarn-debug.*
 yarn-error.*
+lerna-debug.*
+
+# Lock files (only if using multiple package managers - keep the one you use!)
+package-lock.json    # Ignore - using Bun
+yarn.lock            # Ignore - using Bun
+pnpm-lock.yaml       # Ignore - using Bun
+# bun.lockb          # Keep this for Bun
 
 # macOS
 .DS_Store
 *.pem
+.AppleDouble
+.LSOverride
 
-# local env files
+# Linux
+*~
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Local env files
+.env
 .env*.local
+.env.development.local
+.env.test.local
+.env.production.local
 
-# typescript
+# TypeScript
 *.tsbuildinfo
+next-env.d.ts
+
+# Testing
+coverage/
+*.lcov
+.nyc_output
+
+# IDEs and editors
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+*.swp
+*.swo
+*~
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# Misc
+.cache/
 .vercel
+.turbo
+*.log
